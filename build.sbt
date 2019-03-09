@@ -20,14 +20,16 @@ lazy val root = (project in file("."))
     "io.circe" %% "circe-generic" % circe,
     "io.circe" %% "circe-java8" % circe,
     "io.circe" %% "circe-parser" % circe,
-    "com.amazonaws" % "aws-java-sdk" % "1.11.513",
+    //"com.amazonaws" % "aws-java-sdk" % "1.11.513",
     //"com.amazonaws" % "aws-java-sdk-sqs" % "1.11.508",
     "org.http4s" %% "http4s-circe" % http4s,
     "org.typelevel" %% "cats-core" % "1.1.0",
     "org.typelevel" %% "cats-effect" % "1.0.0-RC2",
+    "software.amazon.awssdk" % "aws-sdk-java" % "2.5.5",
 
     "org.scalacheck" %% "scalacheck" % "1.14.0" % Test,
     "org.scalatest" %% "scalatest" % "3.0.5" % Test
+    
   )
 ).settings(
   addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full)

@@ -1,6 +1,7 @@
 package aws4cats.sqs
 
 import org.http4s.{EntityDecoder, EntityEncoder, Uri}
+import software.amazon.awssdk.services.sqs.model.QueueAttributeName
 
 import scala.concurrent.duration.FiniteDuration
 
@@ -24,7 +25,7 @@ trait SQSClient[F[_]] {
   //TODO: Consider making returned map type safe
   def getQueueAttributes(
       queue: QueueUri,
-      attributes: List[ReadableQueueAttributes]): F[Map[String, String]]
+      attributes: List[QueueAttributeName]): F[Map[QueueAttributeName, String]]
 
   def getQueueUrl(queue: QueueUri): F[Uri]
 
@@ -47,7 +48,7 @@ trait SQSClient[F[_]] {
 
   def setQueueAttributes(
     queue: QueueUri,
-    attributes: Map[String, String]
+    attributes: Map[QueueAttributeName, String]
   ): F[Unit]
 
 }

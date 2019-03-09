@@ -1,27 +1,25 @@
 package aws4cats.sqs
 
-import java.util.concurrent.ExecutorService
+import java.net.URI
 
-import aws4cats.{ExecutorServiceWrapper, Region}
+import aws4cats.ExecutorServiceWrapper
 import cats.effect._
 import cats.effect.implicits._
 import cats.implicits._
-import com.amazonaws.auth.{AWSCredentialsProvider, DefaultAWSCredentialsProviderChain}
-import com.amazonaws.client.builder.AwsClientBuilder.EndpointConfiguration
-import com.amazonaws.client.builder.ExecutorFactory
-import com.amazonaws.handlers.AsyncHandler
-import com.amazonaws.services.sqs.model.{Message => AwsMessage, _}
-import com.amazonaws.services.sqs.{AmazonSQSAsync, AmazonSQSAsyncClient}
+import software.amazon.awssdk.auth.credentials.{AwsCredentialsProvider, AwsCredentialsProviderChain, DefaultCredentialsProvider}
+import software.amazon.awssdk.core.client.config.{ClientAsyncConfiguration, SdkAdvancedAsyncClientOption}
+import software.amazon.awssdk.services.sqs.model.{Message => AwsMessage, _}
+import software.amazon.awssdk.services.sqs._
 import fs2.{Stream, text}
 import io.chrisdavenport.log4cats.Logger
 import org.http4s.headers.`Content-Type`
-import org.http4s.{EntityDecoder, EntityEncoder, Headers, MediaType, Response, Uri}
+import org.http4s.{EntityDecoder, EntityEncoder, Headers, MediaType, Response => Http4sResp, Uri}
 
 import scala.collection.JavaConverters._
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.FiniteDuration
 
-sealed abstract class AsyncSQSClient[F[_]](client: AmazonSQSAsync)(
+sealed abstract class AsyncSQSClient[F[_]](client: SqsAsyncClient)(
     implicit E: Effect[F],
     L: Logger[F]
 ) extends SQSClient[F] {
@@ -32,78 +30,62 @@ sealed abstract class AsyncSQSClient[F[_]](client: AmazonSQSAsync)(
     visibilityTimeout:  FiniteDuration
   ): F[Unit] =
     E.async{ cb =>
-      val r = new ChangeMessageVisibilityRequest(
-        queueUri.uri.renderString,
-        receiptHandle.repr,
-        visibilityTimeout.toSeconds.toInt
-      val h = new AsyncHandler[ChangeMessageVisibilityRequest, ChangeMessageVisibilityResult] {
-        override def onError(exception: Exception): Unit = cb(Left(exception))
-        override def onSuccess(request: ChangeMessageVisibilityRequest, result: ChangeMessageVisibilityResult): Unit =
-          cb(Right(()))
-      }
-      client.changeMessageVisibilityAsync(r, h)
+      val r = ChangeMessageVisibilityRequest.builder()
+        .queueUrl(queueUri.uri.renderString)
+        .receiptHandle(receiptHandle.repr)
+        .visibilityTimeout(visibilityTimeout.toSeconds.toInt)
+        .build()
+      client.changeMessageVisibility(r).handle[Unit]((_, err) =>
+        Option(err).fold(cb(Right(())))(err => cb(Left(err)))
+      )
     }
 
   override def createQueue(queueName: String): F[Uri] =
     E.async { cb =>
-      val r = new CreateQueueRequest(queueName)
-      val h = new AsyncHandler[CreateQueueRequest, CreateQueueResult] {
-        override def onError(exception: Exception): Unit = cb(Left(exception))
-        override def onSuccess(request: CreateQueueRequest,
-                               result: CreateQueueResult): Unit =
-          Uri.fromString(result.getQueueUrl)
+      val r = CreateQueueRequest.builder().queueName(queueName).build()
+      client.createQueue(r).handle[Unit]((res, err) => Option(res).fold(cb(Left(err)))(resp =>
+        Uri.fromString(resp.queueUrl())
             .fold(err => cb(Left(new Exception(err.message))),
               uri => cb(Right(uri))
             )
-      }
-      client.createQueueAsync(r, h)
+      ))
     }
 
   override def deleteMessage[M](
       queue: QueueUri,
       receiptHandle: ReceiptHandle
   ): F[Unit] = {
-    E.async[Unit] { cb =>
+    E.async { cb =>
       val r =
-        new DeleteMessageRequest(queue.uri.renderString, receiptHandle.repr)
-      val h = new AsyncHandler[DeleteMessageRequest, DeleteMessageResult] {
-        override def onError(exception: Exception): Unit = cb(Left(exception))
-        override def onSuccess(request: DeleteMessageRequest,
-                               result: DeleteMessageResult): Unit =
-          cb(Right(()))
-      }
-      client.deleteMessageAsync(r, h)
+        DeleteMessageRequest.builder()
+          .queueUrl(queue.uri.renderString)
+          .receiptHandle(receiptHandle.repr)
+        .build()
+      client.deleteMessage(r).handle[Unit]((_, err) =>
+        Option(err).fold(cb(Right(())))(err => cb(Left(err)))
+      )
     }
   }
 
   override def deleteQueue(queue: QueueUri): F[Unit] =
     E.async{ cb =>
-      val h = new AsyncHandler[DeleteQueueRequest, DeleteQueueResult]{
-        override def onError(exception: Exception): Unit =
-          cb(Left(exception))
-        override def onSuccess(request: DeleteQueueRequest, result: DeleteQueueResult): Unit =
-          cb(Right(()))
-      }
-      client.deleteQueueAsync(queue.uri.renderString, h)
+      val r = DeleteQueueRequest.builder().queueUrl(queue.uri.renderString).build()
+      client.deleteQueue(r).handle[Unit]((_, err) => Option(err).fold(cb(Right(())))(err =>
+      cb(Left(err))))
     }
 
 
   override def getQueueAttributes(
       queue: QueueUri,
-      attributes: List[ReadableQueueAttributes]): F[Map[String, String]] =
+      attributes: List[QueueAttributeName]): F[Map[QueueAttributeName, String]] =
     E.async { cb =>
-      val r = new GetQueueAttributesRequest(
-        queue.uri.renderString,
-        ReadableQueueAttributes.asJavaList(attributes)
-      )
-      val h =
-        new AsyncHandler[GetQueueAttributesRequest, GetQueueAttributesResult] {
-          override def onError(exception: Exception): Unit = cb(Left(exception))
-          override def onSuccess(request: GetQueueAttributesRequest,
-                                 result: GetQueueAttributesResult): Unit =
-            cb(Right(result.getAttributes.asScala.toMap))
-        }
-      client.getQueueAttributesAsync(r, h)
+      val r = GetQueueAttributesRequest.builder()
+        .queueUrl(queue.uri.renderString)
+        .attributeNames(attributes.asJavaCollection)
+        .build()
+      client.getQueueAttributes(r).handle[Unit]((res, err) => Option(res).fold(cb(Left(err)))(res =>
+        cb(Right(res.attributes().asScala.toMap))
+      ))
     }
 
   override def getQueueUrl(queue: QueueUri): F[Uri] = {
@@ -114,43 +96,29 @@ sealed abstract class AsyncSQSClient[F[_]](client: AmazonSQSAsync)(
       )
       .flatMap(queueName =>
         E.async[Uri] { cb =>
-          val h = new AsyncHandler[GetQueueUrlRequest, GetQueueUrlResult] {
-            override def onError(exception: Exception): Unit =
-              cb(Left(exception))
-            override def onSuccess(
-                request: _root_.com.amazonaws.services.sqs.model.GetQueueUrlRequest,
-                result: _root_.com.amazonaws.services.sqs.model.GetQueueUrlResult)
-              : Unit =
-              Uri
-                .fromString(result.getQueueUrl)
+          val r = GetQueueUrlRequest.builder().queueName(queueName).build()
+          client.getQueueUrl(r).handle[Unit]((res, err) => Option(res).fold(cb(Left(err)))(res =>
+            Uri
+                .fromString(res.queueUrl())
                 .fold(err => cb(Left(new Exception(err.message))),
                       uri => cb(Right(uri)))
-          }
-          client.getQueueUrlAsync(queueName, h)
+          ))
       })
   }
 
   override def listQueues(prefix: String): F[List[QueueUri]] =
     E.async{ cb =>
-      val h = new AsyncHandler[ListQueuesRequest, ListQueuesResult] {
-        override def onError(exception: Exception): Unit = cb(Left(exception))
-        override def onSuccess(request: ListQueuesRequest, result: ListQueuesResult): Unit =
-          result.getQueueUrls.asScala.toList.traverse(Uri.fromString)
-            .fold(err => cb(Left(new Exception(err))), uris => cb(Right(uris)))
-      }
-      client.listQueuesAsync(prefix, h)
+      val r = ListQueuesRequest.builder().queueNamePrefix(prefix).build()
+      client.listQueues(r).handle[Unit]((res, err) => Option(res).fold(cb(Left(err)))(_.queueUrls().asScala.toList.traverse(Uri.fromString)
+            .fold(err => cb(Left(new Exception(err))), uris => cb(Right(uris.map(QueueUri(_)))))))
     }
 
   override def purgeQueue(queue: QueueUri): F[Unit] = {
     E.async { cb =>
-      val r = new PurgeQueueRequest(queue.uri.renderString)
-      val h = new AsyncHandler[PurgeQueueRequest, PurgeQueueResult] {
-        override def onError(exception: Exception): Unit = cb(Left(exception))
-        override def onSuccess(request: PurgeQueueRequest,
-                               result: PurgeQueueResult): Unit =
-          cb(Right(()))
-      }
-      client.purgeQueueAsync(r, h)
+      val r = PurgeQueueRequest.builder().queueUrl(queue.uri.renderString).build()
+      client.purgeQueue(r).handle[Unit]((_, err) =>
+        Option(err).fold(cb(Right(())))(err => cb(Left(err)))
+      )
     }
   }
 
@@ -160,29 +128,24 @@ sealed abstract class AsyncSQSClient[F[_]](client: AmazonSQSAsync)(
   )(implicit
     ED: EntityDecoder[F, M]): F[List[Either[SQSDecodeFailure, Message[M]]]] =
     E.async[List[AwsMessage]] { cb =>
-        val r = new ReceiveMessageRequest(queue.uri.renderString)
-        r.setMaxNumberOfMessages(options.numMessage)
-        val h =
-          new AsyncHandler[ReceiveMessageRequest, ReceiveMessageResult] {
-            override def onError(exception: Exception): Unit =
-              cb(Left(exception))
-            override def onSuccess(request: ReceiveMessageRequest,
-                                   result: ReceiveMessageResult): Unit =
-              cb(Right(result.getMessages.asScala.toList))
-          }
-        client.receiveMessageAsync(r, h)
+        val r = ReceiveMessageRequest.builder()
+          .maxNumberOfMessages(options.numMessage)
+          .build()
+        client.receiveMessage(r).handle[Unit]((res, err) => Option(res).fold(cb(Left(err)))(res =>
+          cb(Right(res.messages().asScala.toList))
+        ))
       }
       .flatMap(_.traverse { message =>
         ED.decode(
-            Response[F](
+            Http4sResp[F](
               headers = Headers(`Content-Type`(MediaType.application.json)),
-              body = Stream(message.getBody).through(text.utf8Encode)
+              body = Stream(message.body()).through(text.utf8Encode)
             ),
             true
           )
           .bimap(
-            SQSDecodeFailure(_, message.getReceiptHandle),
-            Message(message.getReceiptHandle, _)
+            SQSDecodeFailure(_, message.receiptHandle()),
+            Message(message.receiptHandle(), _)
           )
           .value
       })
@@ -192,47 +155,43 @@ sealed abstract class AsyncSQSClient[F[_]](client: AmazonSQSAsync)(
       message: M
   )(implicit EE: EntityEncoder[F, M]): F[SendMessageResponse] =
     E.async { cb =>
-      val r = new SendMessageRequest(
-        queue.uri.renderString,
-        EE.toEntity(message)
-          .body
-          .through(text.utf8Decode)
-          .compile
-          .lastOrError
-          .toIO
-          .unsafeRunSync()
-      )
-      val h = new AsyncHandler[SendMessageRequest, SendMessageResult] {
-        override def onError(exception: Exception): Unit = cb(Left(exception))
-
-        override def onSuccess(request: SendMessageRequest,
-                               result: SendMessageResult): Unit =
-          cb(
-            Right(
-              SendMessageResponse(
-                result.getMD5OfMessageAttributes,
-                result.getMD5OfMessageBody,
-                result.getMessageId
-              )
-            ))
-
-      }
-      client.sendMessageAsync(r, h)
+      val r = SendMessageRequest
+        .builder()
+        .queueUrl(queue.uri.renderString)
+        .messageBody(
+          EE.toEntity(message)
+            .body
+            .through(text.utf8Decode)
+            .compile
+            .lastOrError
+            .toIO
+            .unsafeRunSync()
+        )
+        .build()
+      client.sendMessage(r).handle[Unit]((res, err) => Option(res).fold(cb(Left(err)))(res =>
+      cb(Right(
+        SendMessageResponse(
+          res.md5OfMessageAttributes(),
+          res.md5OfMessageBody(),
+          res.messageId()
+        )
+      ))))
     }
 
 
   override def setQueueAttributes(
     queue: QueueUri,
-    attributes: Map[String, String]
+    attributes: Map[QueueAttributeName, String]
   ): F[Unit] =
     E.async{ cb =>
-      val h = new AsyncHandler[SetQueueAttributesRequest, SetQueueAttributesResult] {
-        override def onError(exception: Exception): Unit = cb(Left(exception))
-        override def onSuccess(request: SetQueueAttributesRequest, result: SetQueueAttributesResult): Unit =
-          cb(Right(()))
-
-      }
-      client.setQueueAttributesAsync(queue.uri.renderString, attributes.asJava, h)
+      val r = SetQueueAttributesRequest
+        .builder()
+        .queueUrl(queue.uri.renderString)
+        .attributes(attributes.asJava)
+        .build()
+      client.setQueueAttributes(r).handle[Unit]((_, err) =>
+        Option(err).fold(cb(Right(())))(err => cb(Left(err)))
+      )
     }
 
 }
@@ -241,20 +200,23 @@ object AsyncSQSClient {
 
   def apply[F[_]: Effect: Logger](
       ecR: Resource[F, ExecutionContext],
-      endpointConfiguration: Option[(Uri, Region)] = None,
-      credentialsProvider: AWSCredentialsProvider =
-        new DefaultAWSCredentialsProviderChain
+      endpointConfiguration: Option[Uri] = None,
+      credentialsProvider: AwsCredentialsProvider =
+        DefaultCredentialsProvider.create()
   ): Resource[F, AsyncSQSClient[F]] = {
     ecR.map { ec =>
-      val cl = AmazonSQSAsyncClient
-        .asyncBuilder()
-        .withCredentials(credentialsProvider)
-        .withExecutorFactory(new ExecutorFactory {
-          override def newExecutor(): ExecutorService =
+      val builder = SqsAsyncClient.builder()
+        .credentialsProvider(credentialsProvider)
+        .asyncConfiguration(
+          ClientAsyncConfiguration.builder()
+          .advancedOption(
+            SdkAdvancedAsyncClientOption.FUTURE_COMPLETION_EXECUTOR,
             new ExecutorServiceWrapper(ec)
-        })
-      new AsyncSQSClient[F](endpointConfiguration.fold(cl.build()){case (uri, region) =>
-        cl.withEndpointConfiguration(new EndpointConfiguration(uri.renderString, region.toString)).build()}) {}
+          ).build()
+        )
+      new AsyncSQSClient[F](endpointConfiguration.fold(builder.build())(uri =>
+        builder.endpointOverride(URI.create(uri.renderString)).build())
+      ) {}
     }
   }
 }
