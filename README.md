@@ -1,8 +1,7 @@
 ## aws4cats
 
-`cats-effect`, `http4s-core` driver for various AWS tools (will likely
-include `fs2` as it expands)
-
+`cats-effect`, `http4s-core`, `fs2` driver for various AWS tools. Wraps the
+new 2.0 Java AWS SDK
 
 ### Supported tooling
 

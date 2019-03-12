@@ -20,8 +20,6 @@ lazy val root = (project in file("."))
     "io.circe" %% "circe-generic" % circe,
     "io.circe" %% "circe-java8" % circe,
     "io.circe" %% "circe-parser" % circe,
-    //"com.amazonaws" % "aws-java-sdk" % "1.11.513",
-    //"com.amazonaws" % "aws-java-sdk-sqs" % "1.11.508",
     "org.http4s" %% "http4s-circe" % http4s,
     "org.typelevel" %% "cats-core" % "1.1.0",
     "org.typelevel" %% "cats-effect" % "1.0.0-RC2",
@@ -32,7 +30,8 @@ lazy val root = (project in file("."))
     
   )
 ).settings(
-  addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full)
+  addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full),
+  addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.9.9")
 ).settings(
   scalacOptions ++= Seq(
     "-Xfatal-warnings",
@@ -42,7 +41,6 @@ lazy val root = (project in file("."))
     "-deprecation",
     "-language:higherKinds",
     "-language:implicitConversions",
-    "-language:experimental.macros"
   )
 )
   .settings(

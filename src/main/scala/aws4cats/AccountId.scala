@@ -1,14 +1,17 @@
 package aws4cats
 
+import cats.implicits._
+import internal._
+
 case class AccountId(
-  id: Long
+    id: Long
 )
 
 object AccountId {
 
-  /*def unsafeFrom(id: Long) =
-    if (id > 999999999999L) Left()
-    else Right(AccountId(id))*/
+  def unsafe(id: Long): AccountId = apply(id).rethrow
 
-
+  def apply(id: Long): Either[String, AccountId] =
+    if (id.toString.matches("[\\d]{12}")) (new AccountId(id)).asRight[String]
+    else s"Account id: $id must be 12 digits long".asLeft[AccountId]
 }

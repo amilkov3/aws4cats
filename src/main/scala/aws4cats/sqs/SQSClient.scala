@@ -1,54 +1,73 @@
 package aws4cats.sqs
 
-import org.http4s.{EntityDecoder, EntityEncoder, Uri}
-import software.amazon.awssdk.services.sqs.model.QueueAttributeName
+import aws4cats.AccountId
+import org.http4s.{EntityDecoder, EntityEncoder, MediaType, Uri}
+import software.amazon.awssdk.core.SdkClient
+import software.amazon.awssdk.services.sqs.SqsAsyncClient
+import software.amazon.awssdk.services.sqs.model.{
+  QueueAttributeName,
+  ReceiveMessageRequest
+}
 
 import scala.concurrent.duration.FiniteDuration
 
 trait SQSClient[F[_]] {
 
-  def changeMessageVisibility(
-    queueUri: QueueUri,
-    receiptHandle: ReceiptHandle,
-    visibilityTimeout: FiniteDuration
+  def addPermission(
+      queueUri: Uri,
+      actions: List[Action],
+      accountIds: List[AccountId],
+      label: String
   ): F[Unit]
 
-  def createQueue(queueName: String): F[Uri]
+  def changeMessageVisibility(
+      queueUri: Uri,
+      receiptHandle: ReceiptHandle,
+      visibilityTimeout: FiniteDuration
+  ): F[Unit]
 
-  def deleteMessage[M](
-      queue: QueueUri,
+  //TODO: hmap?
+  def createQueue(
+      queueName: QueueName,
+      attributes: Map[QueueAttributeName, String]
+  ): F[Uri]
+
+  def deleteMessage(
+      queueUri: Uri,
       receiptHandle: ReceiptHandle
   ): F[Unit]
 
-  def deleteQueue(queue: QueueUri): F[Unit]
+  def deleteQueue(queue: Uri): F[Unit]
 
-  //TODO: Consider making returned map type safe
+  //TODO: hmap?
   def getQueueAttributes(
-      queue: QueueUri,
+      queueUri: Uri,
       attributes: List[QueueAttributeName]): F[Map[QueueAttributeName, String]]
 
-  def getQueueUrl(queue: QueueUri): F[Uri]
+  def getQueueUrl(queueName: QueueName,
+                  ownerAccountId: Option[AccountId] = None): F[Uri]
 
-  def listQueues(prefix: String): F[List[QueueUri]]
+  def listQueues(prefix: String): F[List[Uri]]
 
-  def purgeQueue(queue: QueueUri): F[Unit]
+  def purgeQueue(queueUri: Uri): F[Unit]
 
   def receiveMessage[M](
-    //TODO: Maybe just use `Uri` and have a rich `fromParts`
-      queue: QueueUri,
-      options: ReceiveMessageOptions
-  )(implicit
-    ED: EntityDecoder[F, M]): F[List[Either[SQSDecodeFailure, Message[M]]]]
+      queueUri: Uri
+  ): BuilderStage[
+    ReceiveMessageRequest.Builder,
+    DecodeStage[ReceiveMessageRequest, λ[A => List[ReceiveMessageResponse[A]]]],
+    //TODO: dont want an async constriant in this trait
+    SqsAsyncClient]
 
   def sendMessage[M](
-      queue: QueueUri,
+      queueUri: Uri,
       message: M
   )(implicit EE: EntityEncoder[F, M]): F[SendMessageResponse]
 
-
   def setQueueAttributes(
-    queue: QueueUri,
-    attributes: Map[QueueAttributeName, String]
+      queueUri: Uri,
+      //TODO: hmap?
+      attributes: Map[QueueAttributeName, String]
   ): F[Unit]
 
 }
