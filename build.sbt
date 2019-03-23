@@ -110,7 +110,7 @@ lazy val docs = project.in(file("docs"))
       )
     )
   )
-  .dependsOn(core, dynamodb, s3, sqs)
+  .dependsOn(core, sqs)
 
 lazy val dynamodb = project.in(file("dynamodb"))
   .settings(name := "aws4cats-dynamodb")
