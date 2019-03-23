@@ -99,6 +99,7 @@ lazy val docs = project.in(file("docs"))
   .settings(noPublishSettings)
   .settings(
     micrositeName := "aws4cats",
+    micrositeBaseUrl := "aws4cats",
     micrositeDescription := "Purely functional clients for AWS services",
     micrositeGithubOwner := "amilkov3",
     micrositeGithubRepo := "aws4cats",
@@ -110,7 +111,7 @@ lazy val docs = project.in(file("docs"))
       )
     )
   )
-  .dependsOn(core, dynamodb, s3, sqs)
+  .dependsOn(core, sqs)
 
 lazy val dynamodb = project.in(file("dynamodb"))
   .settings(name := "aws4cats-dynamodb")
