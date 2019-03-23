@@ -2,14 +2,7 @@ package aws4cats.sqs
 
 import aws4cats.AccountId
 import aws4cats.sqs.builder._
-import aws4cats._
-import org.http4s.{EntityDecoder, EntityEncoder, MediaType, Uri}
-import software.amazon.awssdk.core.SdkClient
-import software.amazon.awssdk.services.sqs.SqsAsyncClient
-import software.amazon.awssdk.services.sqs.model.{
-  QueueAttributeName,
-  ReceiveMessageRequest
-}
+import org.http4s.{EntityEncoder, Uri}
 
 import scala.concurrent.duration.FiniteDuration
 
@@ -19,7 +12,7 @@ trait SQSClient[F[_]] {
     queueUri: Uri,
     actions: List[Action],
     accountIds: List[AccountId],
-    label: String
+    label: Label
   ): F[Unit]
 
   def changeMessageVisibility(
@@ -31,7 +24,7 @@ trait SQSClient[F[_]] {
   //TODO: hmap?
   def createQueue(
     queueName: QueueName,
-    attributes: Map[QueueAttributeName, String]
+    attributes: Map[QueueAttributeName, String] = Map.empty
   ): F[Uri]
 
   def deleteMessage(
@@ -54,13 +47,9 @@ trait SQSClient[F[_]] {
 
   def purgeQueue(queueUri: Uri): F[Unit]
 
-  def receiveMessage[M](
+  def receiveMessage(
     queueUri: Uri
-  ): BuilderStage[
-    ReceiveMessageRequest.Builder,
-    DecodeStage[ReceiveMessageRequest, λ[A => List[ReceiveMessageResponse[A]]]],
-    //TODO: dont want an async constriant in this trait
-    SqsAsyncClient]
+  ): BaseReceiveMessageBuilder
 
   def sendMessage[M](
     queueUri: Uri,

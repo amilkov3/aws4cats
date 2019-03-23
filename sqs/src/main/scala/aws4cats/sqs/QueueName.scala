@@ -5,7 +5,7 @@ import aws4cats.internal._
 import cats.Show
 
 case class QueueName(
-  name: String
+  value: String
 )
 
 object QueueName {
@@ -19,13 +19,5 @@ object QueueName {
       s"Queue name: $name must be alphanumeric (- and _ are allowed as well) and no more than 80 chars"
         .asLeft[QueueName]
 
-  implicit val show: Show[QueueName] = Show.show(_.name)
+  implicit val show: Show[QueueName] = Show.show(_.value)
 }
-
-case class SendMessageResponse(
-  md5OfMessageAttributes: String,
-  md5OfMessageBody: String,
-  messageId: String,
-  // only for FIFO queues
-  sequenceNumber: Option[String]
-)

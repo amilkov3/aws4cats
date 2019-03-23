@@ -1,45 +1,19 @@
 package aws4cats.sqs
 
-import java.net.URI
-
-import aws4cats.{
-  sqs,
-  AccountId,
-  BaseSdkAsyncClientBuilder,
-  ExecutorServiceWrapper
-}
+import aws4cats.{AccountId, BaseSdkAsyncClientBuilder, ExecutorServiceWrapper}
 import aws4cats.internal._
 import aws4cats.sqs.builder._
 import cats.effect._
 import cats.implicits._
-import software.amazon.awssdk.auth.credentials.{
-  AwsCredentialsProvider,
-  AwsCredentialsProviderChain,
-  DefaultCredentialsProvider
-}
 import software.amazon.awssdk.core.client.config.{
   ClientAsyncConfiguration,
   SdkAdvancedAsyncClientOption
 }
-import software.amazon.awssdk.services.sqs.model.{
-  Message => AwsMessage,
-  ReceiveMessageResponse => AwsReceiveMessageResponse,
-  QueueAttributeName => AwsQueueAttributeName,
-  _
-}
+import software.amazon.awssdk.services.sqs.model._
 import software.amazon.awssdk.services.sqs._
-import fs2.{text, Stream}
+import fs2.text
 import io.chrisdavenport.log4cats.Logger
-import org.http4s.headers.`Content-Type`
-import org.http4s.{
-  DecodeFailure,
-  EntityDecoder,
-  EntityEncoder,
-  Headers,
-  MediaType,
-  Uri,
-  Response => Http4sResp
-}
+import org.http4s.{EntityEncoder, Uri}
 
 import scala.collection.JavaConverters._
 import scala.concurrent.ExecutionContext
@@ -54,16 +28,16 @@ sealed abstract class AsyncSQSClient[F[_]](client: SqsAsyncClient)(
     queueUri: Uri,
     actions: List[Action],
     accountIds: List[AccountId],
-    label: String
+    label: Label
   ): F[Unit] =
     A.async { cb =>
-      val r = AddPermissionRequest
+      val req = AddPermissionRequest
         .builder()
         .actions(actions.map(_.toString).asJavaCollection)
         .awsAccountIds(accountIds.map(_.id.toString): _*)
-        .label(label)
+        .label(label.value)
         .build()
-      client.addPermission(r).handleVoidResult(cb)
+      client.addPermission(req).handleVoidResult(cb)
     }
 
   override def changeMessageVisibility(
@@ -72,13 +46,13 @@ sealed abstract class AsyncSQSClient[F[_]](client: SqsAsyncClient)(
     visibilityTimeout: FiniteDuration
   ): F[Unit] =
     A.async { cb =>
-      val r = ChangeMessageVisibilityRequest
+      val req = ChangeMessageVisibilityRequest
         .builder()
         .queueUrl(queueUri.renderString)
-        .receiptHandle(receiptHandle.repr)
+        .receiptHandle(receiptHandle.handle)
         .visibilityTimeout(visibilityTimeout.toSeconds.toInt)
         .build()
-      client.changeMessageVisibility(r).handleVoidResult(cb)
+      client.changeMessageVisibility(req).handleVoidResult(cb)
     }
 
   override def createQueue(
@@ -86,13 +60,15 @@ sealed abstract class AsyncSQSClient[F[_]](client: SqsAsyncClient)(
     attributes: Map[QueueAttributeName, String] = Map.empty
   ): F[Uri] =
     A.async { cb =>
-      val r = CreateQueueRequest
+      val req = CreateQueueRequest
         .builder()
-        .queueName(queueName.name)
-        .attributes(attributes.asJava)
+        .queueName(queueName.value)
+        .attributes(attributes.map {
+          case (k, v) => k.queueAttributeName -> v
+        }.asJava)
         .build()
       client
-        .createQueue(r)
+        .createQueue(req)
         .handleResultE(
           cb,
           resp =>
@@ -107,45 +83,50 @@ sealed abstract class AsyncSQSClient[F[_]](client: SqsAsyncClient)(
     receiptHandle: ReceiptHandle
   ): F[Unit] =
     A.async { cb =>
-      val r =
+      val req =
         DeleteMessageRequest
           .builder()
           .queueUrl(queue.renderString)
-          .receiptHandle(receiptHandle.repr)
+          .receiptHandle(receiptHandle.handle)
           .build()
-      client.deleteMessage(r).handleVoidResult(cb)
+      client.deleteMessage(req).handleVoidResult(cb)
     }
 
   override def deleteQueue(queue: Uri): F[Unit] =
     A.async { cb =>
-      val r =
+      val req =
         DeleteQueueRequest.builder().queueUrl(queue.renderString).build()
-      client.deleteQueue(r).handleVoidResult(cb)
+      client.deleteQueue(req).handleVoidResult(cb)
     }
 
   override def getQueueAttributes(
     queue: Uri,
     attributes: List[QueueAttributeName]): F[Map[QueueAttributeName, String]] =
     A.async { cb =>
-      val r = GetQueueAttributesRequest
+      val req = GetQueueAttributesRequest
         .builder()
         .queueUrl(queue.renderString)
         .attributeNames(attributes.map(_.queueAttributeName).asJavaCollection)
         .build()
       client
-        .getQueueAttributes(r)
-        .handleResult(cb, _.attributes().asScala.toMap)
+        .getQueueAttributes(req)
+        .handleResult(
+          cb,
+          _.attributes().asScala.toMap.map {
+            case (k, v) => QueueAttributeName.fromEnum(k) -> v
+          }
+        )
     }
 
   override def getQueueUrl(
     queueName: QueueName,
     ownerAccountId: Option[AccountId] = None): F[Uri] =
     A.async[Uri] { cb =>
-      val rb = GetQueueUrlRequest.builder().queueName(queueName.name)
-      val r = ownerAccountId.fold(rb.build())(id =>
+      val rb = GetQueueUrlRequest.builder().queueName(queueName.value)
+      val req = ownerAccountId.fold(rb.build())(id =>
         rb.queueOwnerAWSAccountId(id.id.toString).build)
       client
-        .getQueueUrl(r)
+        .getQueueUrl(req)
         .handleResultE(
           cb,
           res =>
@@ -157,9 +138,9 @@ sealed abstract class AsyncSQSClient[F[_]](client: SqsAsyncClient)(
 
   override def listQueues(prefix: String): F[List[Uri]] =
     A.async { cb =>
-      val r = ListQueuesRequest.builder().queueNamePrefix(prefix).build()
+      val req = ListQueuesRequest.builder().queueNamePrefix(prefix).build()
       client
-        .listQueues(r)
+        .listQueues(req)
         .handleResultE(
           cb,
           _.queueUrls().asScala.toList
@@ -170,14 +151,14 @@ sealed abstract class AsyncSQSClient[F[_]](client: SqsAsyncClient)(
 
   override def purgeQueue(queue: Uri): F[Unit] =
     A.async { cb =>
-      val r =
+      val req =
         PurgeQueueRequest.builder().queueUrl(queue.renderString).build()
-      client.purgeQueue(r).handleVoidResult(cb)
+      client.purgeQueue(req).handleVoidResult(cb)
     }
 
-  override def receiveMessage[M](
+  override def receiveMessage(
     queueUri: Uri
-  ): ReceiveMessageBuilder =
+  ): BaseReceiveMessageBuilder =
     new ReceiveMessageBuilder(
       ReceiveMessageRequest
         .builder()
@@ -198,13 +179,13 @@ sealed abstract class AsyncSQSClient[F[_]](client: SqsAsyncClient)(
       .flatMap(
         body =>
           A.async { cb =>
-            val r = SendMessageRequest
+            val req = SendMessageRequest
               .builder()
               .queueUrl(queue.renderString)
               .messageBody(body)
               .build()
             client
-              .sendMessage(r)
+              .sendMessage(req)
               .handleResult(
                 cb,
                 res =>
@@ -223,7 +204,7 @@ sealed abstract class AsyncSQSClient[F[_]](client: SqsAsyncClient)(
     attributes: Map[QueueAttributeName, String]
   ): F[Unit] =
     A.async { cb =>
-      val r =
+      val req =
         SetQueueAttributesRequest
           .builder()
           .queueUrl(queue.renderString)
@@ -231,7 +212,7 @@ sealed abstract class AsyncSQSClient[F[_]](client: SqsAsyncClient)(
             case (k, v) => k.queueAttributeName -> v
           }.asJava)
           .build()
-      client.setQueueAttributes(r).handleVoidResult(cb)
+      client.setQueueAttributes(req).handleVoidResult(cb)
     }
 
 }
@@ -239,26 +220,39 @@ sealed abstract class AsyncSQSClient[F[_]](client: SqsAsyncClient)(
 sealed abstract class AsyncSQSClientBuilder[F[_]: Effect: ContextShift: Logger](
   builder: SqsAsyncClientBuilder,
   ecR: Resource[F, ExecutionContext]
-) extends BaseSdkAsyncClientBuilder[SqsAsyncClientBuilder, SqsAsyncClient](
-    builder) {
+) extends BaseSdkAsyncClientBuilder[
+    SqsAsyncClientBuilder,
+    SqsAsyncClient,
+    F,
+    SQSClient,
+    AsyncSQSClientBuilder[F]](builder) {
 
-  def resource: Resource[F, SQSClient[F]] =
-    ecR.map(
-      ec =>
-        new AsyncSQSClient[F](
-          builder
-            .asyncConfiguration(
-              ClientAsyncConfiguration
-                .builder()
-                .advancedOption(
-                  SdkAdvancedAsyncClientOption.FUTURE_COMPLETION_EXECUTOR,
-                  new ExecutorServiceWrapper(ec)
-                )
-                .build()
-            )
-            .build()
-        ) {}
-    )
+  override protected def copy(
+    modify: SqsAsyncClientBuilder => SqsAsyncClientBuilder)
+    : AsyncSQSClientBuilder[F] =
+    new AsyncSQSClientBuilder[F](
+      builder = modify(cloner.deepClone(builder)),
+      ecR = ecR
+    ) {}
+
+  override def resource: Resource[F, SQSClient[F]] =
+    ecR.flatMap { ec =>
+      Resource[F, SQSClient[F]] {
+        val b = builder
+          .asyncConfiguration(
+            ClientAsyncConfiguration
+              .builder()
+              .advancedOption(
+                SdkAdvancedAsyncClientOption.FUTURE_COMPLETION_EXECUTOR,
+                new ExecutorServiceWrapper(ec)
+              )
+              .build()
+          )
+          .build()
+        (((new AsyncSQSClient[F](b) {}): SQSClient[F]) -> Sync[F].delay(
+          b.close())).pure[F]
+      }
+    }
 
 }
 

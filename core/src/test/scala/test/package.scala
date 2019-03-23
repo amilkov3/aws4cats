@@ -14,6 +14,8 @@ package object test {
     IO.contextShift(scala.concurrent.ExecutionContext.global)
   implicit val l =
     Slf4jLogger.create[IO].unsafeRunSync()
+  implicit val t =
+    IO.timer(scala.concurrent.ExecutionContext.global)
 
   val ecR: Resource[IO, ExecutionContext] =
     Resource(

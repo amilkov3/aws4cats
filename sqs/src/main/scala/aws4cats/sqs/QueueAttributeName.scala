@@ -7,6 +7,37 @@ import software.amazon.awssdk.services.sqs.model.{
 sealed trait QueueAttributeName extends Product with Serializable {
   val queueAttributeName: AwsQueueAttributeName
 }
+
+object QueueAttributeName {
+
+  import AwsQueueAttributeName._
+
+  def fromEnum(name: AwsQueueAttributeName): QueueAttributeName =
+    // TODO:
+    (name: @unchecked) match {
+      case ALL => All
+      case APPROXIMATE_NUMBER_OF_MESSAGES =>
+        ApproximateNumberOfMessages
+      case APPROXIMATE_NUMBER_OF_MESSAGES_DELAYED =>
+        ApproximateNumberOfMessageDelayed
+      case APPROXIMATE_NUMBER_OF_MESSAGES_NOT_VISIBLE =>
+        ApproximateNumberOfMessagesNotVisible
+      case CONTENT_BASED_DEDUPLICATION       => ContentBasedDeduplication
+      case CREATED_TIMESTAMP                 => CreatedTimestamp
+      case DELAY_SECONDS                     => DelaySeconds
+      case FIFO_QUEUE                        => FifoQueue
+      case KMS_DATA_KEY_REUSE_PERIOD_SECONDS => KmsDataKeyReusePeriodSeconds
+      case KMS_MASTER_KEY_ID                 => KmsMasterKeyId
+      case LAST_MODIFIED_TIMESTAMP           => LastModifiedTimestamp
+      case MAXIMUM_MESSAGE_SIZE              => MaximumMessageSize
+      case MESSAGE_RETENTION_PERIOD          => MessageRetentionPeriod
+      case POLICY                            => Policy
+      case QUEUE_ARN                         => QueueArn
+      case RECEIVE_MESSAGE_WAIT_TIME_SECONDS => ReceiveMessageWaitTimeSeconds
+      case REDRIVE_POLICY                    => RedrivePolicy
+      case VISIBILITY_TIMEOUT                => VisibilityTimeout
+    }
+}
 case object All extends QueueAttributeName {
   val queueAttributeName: AwsQueueAttributeName = AwsQueueAttributeName.ALL
 }

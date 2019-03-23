@@ -1,40 +1,48 @@
 package aws4cats.sqs.builder
 
 import aws4cats.sqs.{ReceiptHandle, ReceiveMessageResponse}
-import aws4cats.{BuilderStage, SendStage}
+import aws4cats.BuilderStage
 import aws4cats.internal._
 import cats.effect.Async
-import fs2.{io, text, Stream}
+import fs2.{text, Stream}
 import org.http4s.headers.`Content-Type`
-import org.http4s.{
-  DecodeFailure,
-  EntityDecoder,
-  EntityEncoder,
-  Headers,
-  MediaType,
-  Uri,
-  Response => Http4sResp
-}
+import org.http4s.{EntityDecoder, Headers, Response => Http4sResp}
 import software.amazon.awssdk.services.sqs.SqsAsyncClient
-import software.amazon.awssdk.services.sqs.model.{
-  Message => AwsMessage,
-  ReceiveMessageResponse => AwsReceiveMessageResponse,
-  _
-}
+import software.amazon.awssdk.services.sqs.model.{Message => AwsMessage, _}
 
 import scala.collection.JavaConverters._
 import cats.implicits._
 
 import scala.concurrent.duration._
 
-private[sqs] class ReceiveMessageBuilder(
+abstract class BaseReceiveMessageBuilder(
   builder: ReceiveMessageRequest.Builder,
-  client: SqsAsyncClient
-) extends BuilderStage[
+  client: SqsAsyncClient)
+  extends BuilderStage[
     ReceiveMessageRequest.Builder,
     DecodeStage[ReceiveMessageRequest, λ[A => List[ReceiveMessageResponse[A]]]],
     SqsAsyncClient
   ](builder, client) {
+
+  def attributesNames(
+    names: List[QueueAttributeName]): BaseReceiveMessageBuilder
+
+  def maxNumberOfMessages(n: Int): BaseReceiveMessageBuilder
+
+  def messageAttributeNames(names: List[String]): BaseReceiveMessageBuilder
+
+  def receiveRequestAttemptId(id: String): BaseReceiveMessageBuilder
+
+  def visibilityTimeOut(timeout: FiniteDuration): BaseReceiveMessageBuilder
+
+  def waitTimeSeconds(time: FiniteDuration): BaseReceiveMessageBuilder
+
+}
+
+private[sqs] class ReceiveMessageBuilder(
+  builder: ReceiveMessageRequest.Builder,
+  client: SqsAsyncClient
+) extends BaseReceiveMessageBuilder(builder, client) {
   self =>
 
   def attributesNames(
@@ -58,13 +66,13 @@ private[sqs] class ReceiveMessageBuilder(
     self
   }
 
-  def visibilityTimeOut(dur: FiniteDuration): ReceiveMessageBuilder = {
-    builder.visibilityTimeout(dur.toSeconds.toInt)
+  def visibilityTimeOut(timeout: FiniteDuration): ReceiveMessageBuilder = {
+    builder.visibilityTimeout(timeout.toSeconds.toInt)
     self
   }
 
-  def waitTimeSeconds(dur: FiniteDuration): ReceiveMessageBuilder = {
-    builder.waitTimeSeconds(dur.toSeconds.toInt)
+  def waitTimeSeconds(time: FiniteDuration): ReceiveMessageBuilder = {
+    builder.waitTimeSeconds(time.toSeconds.toInt)
     self
   }
 
