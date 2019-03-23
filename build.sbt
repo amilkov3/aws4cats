@@ -92,7 +92,6 @@ lazy val docs = project.in(file("docs"))
   .enablePlugins(GhpagesPlugin)
   .settings(
     git.remoteRepo := "git@github.com:amilkov3/aws4cats.git",
-    ghpagesBranch := "master",
     ghpagesNoJekyll := true,
     ghpagesRepository := file("git@github.com:amilkov3/aws4cats.git")
   )
