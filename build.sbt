@@ -99,10 +99,11 @@ lazy val docs = project.in(file("docs"))
   .settings(noPublishSettings)
   .settings(
     micrositeName := "aws4cats",
-    micrositeBaseUrl := "aws4cats",
+    micrositeBaseUrl := "",
     micrositeDescription := "Purely functional clients for AWS services",
     micrositeGithubOwner := "amilkov3",
     micrositeGithubRepo := "aws4cats",
+    micrositeHomepage := "http://aws4cats.milkov.ml",
     micrositeExtraMdFiles := Map(
       file("README.md") -> ExtraMdFileConfig(
         "index.md",
