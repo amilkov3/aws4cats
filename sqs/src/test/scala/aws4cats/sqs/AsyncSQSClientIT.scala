@@ -1,7 +1,6 @@
 package aws4cats.sqs
 
 import cats.effect.{IO, Sync}
-import cats.effect.implicits._
 import cats.implicits._
 import org.http4s.{EntityDecoder, EntityEncoder, MediaType, Uri}
 import org.http4s.circe._
@@ -10,7 +9,6 @@ import cats.Applicative
 import io.circe.{Decoder, Encoder}
 import io.circe.generic.semiauto._
 import org.scalatest.BeforeAndAfterAll
-import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider
 import test._
 
 import concurrent.duration._
@@ -55,7 +53,7 @@ class AsyncSQSClientIT extends BaseTest with BeforeAndAfterAll {
         client =>
           client.createQueue(
             queueName,
-            Map(VisibilityTimeout -> "0")
+            VisibilityTimeout ~> 0.seconds
         )
       )
       .unsafeRunSync()
@@ -77,7 +75,7 @@ class AsyncSQSClientIT extends BaseTest with BeforeAndAfterAll {
 
     clientR
       .use { client =>
-        client.setQueueAttributes(queueUri, Map(DelaySeconds -> "0")) *>
+        client.setQueueAttributes(queueUri, DelaySeconds ~> 0.seconds) *>
           client
             .getQueueAttributes(queueUri, List(DelaySeconds, VisibilityTimeout))
             .map { attribs =>
@@ -89,7 +87,7 @@ class AsyncSQSClientIT extends BaseTest with BeforeAndAfterAll {
             .sendMessage(queueUri, foo) *>
           client
             .receiveMessage(queueUri)
-            .waitTimeSeconds(5.seconds)
+            .waitTime(5.seconds)
             .maxNumberOfMessages(2)
             .build
             .decode[IO, Foo](MediaType.application.json, true)

@@ -6,7 +6,9 @@ import cats.Show
 
 case class Label(
   value: String
-)
+) {
+  def copy(value: String): Either[String, Label] = Label.apply(value)
+}
 
 object Label {
 

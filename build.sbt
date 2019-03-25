@@ -1,5 +1,6 @@
 import microsites.ExtraMdFileConfig
 import ReleaseTransformations._
+import xerial.sbt.Sonatype.GitHubHosting
 
 val http4s = "0.20.0-M6"
 val confide = "0.0.2"
@@ -20,6 +21,7 @@ lazy val commonSettings = Seq(
     "-language:implicitConversions",
   ),
   fork in Test := true,
+  updateOptions := updateOptions.value.withGigahorse(false),
   javaOptions in Test ++= Seq("-Xmx2G", "-XX:MaxMetaspaceSize=1024M")
 )
 
@@ -58,6 +60,7 @@ lazy val releasePublishSettings = Seq(
   publishArtifact in Test := false,
   pomIncludeRepository := { _ => false },
   sonatypeProfileName := "ml.milkov",
+  sonatypeProjectHosting := Some(GitHubHosting("amilkov3", "aws4cats", "amilkov3@gmail.com")),
   publishTo := {
     val nexus = "https://oss.sonatype.org/"
     if (isSnapshot.value)
@@ -68,11 +71,11 @@ lazy val releasePublishSettings = Seq(
   scmInfo := Some(
     ScmInfo(
       url("https://github.com/amilkov3/aws4cats"),
-      "https://github.com/amilkov3/aws4cats.git"
+      "scm:git@github.com/amilkov3/aws4cats.git"
     )
   ),
   developers := List(
-    Developer("amilkov3",  "Alex Milkov", "amilkov3@gmai.com", url("https://milkov.ml"))
+    Developer("amilkov3",  "Alex Milkov", "amilkov3@gmail.com", url("https://milkov.ml"))
   )
 )
 
@@ -117,6 +120,7 @@ lazy val docs = project.in(file("docs"))
 lazy val dynamodb = project.in(file("dynamodb"))
   .settings(name := "aws4cats-dynamodb")
   .settings(commonSettings)
+  .settings(noPublishSettings)
   .settings(
     libraryDependencies ++=
       (deps :+ ("software.amazon.awssdk" % "dynamodb" % awssdk))
@@ -126,6 +130,7 @@ lazy val dynamodb = project.in(file("dynamodb"))
 lazy val s3 = project.in(file("s3"))
   .settings(name := "aws4cats-s3")
   .settings(commonSettings)
+  .settings(noPublishSettings)
   .settings(
     libraryDependencies ++=
       (deps :+ ("software.amazon.awssdk" % "s3" % awssdk))
@@ -161,3 +166,4 @@ lazy val deps = Seq(
   "org.scalacheck" %% "scalacheck" % "1.14.0" % Test,
   "org.scalatest" %% "scalatest" % "3.0.5" % Test
 )
+

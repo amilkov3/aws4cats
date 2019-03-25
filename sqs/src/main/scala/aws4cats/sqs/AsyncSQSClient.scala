@@ -57,15 +57,20 @@ sealed abstract class AsyncSQSClient[F[_]](client: SqsAsyncClient)(
 
   override def createQueue(
     queueName: QueueName,
-    attributes: Map[QueueAttributeName, String] = Map.empty
+    attributes: Pair*
   ): F[Uri] =
     A.async { cb =>
       val req = CreateQueueRequest
         .builder()
         .queueName(queueName.value)
-        .attributes(attributes.map {
-          case (k, v) => k.queueAttributeName -> v
-        }.asJava)
+        .attributes(
+          attributes
+            .map { pair =>
+              val (k, v) = pair.repr
+              k.queueAttributeName -> v
+            }
+            .toMap
+            .asJava)
         .build()
       client
         .createQueue(req)
@@ -201,16 +206,21 @@ sealed abstract class AsyncSQSClient[F[_]](client: SqsAsyncClient)(
 
   override def setQueueAttributes(
     queue: Uri,
-    attributes: Map[QueueAttributeName, String]
+    attributes: Pair*
   ): F[Unit] =
     A.async { cb =>
       val req =
         SetQueueAttributesRequest
           .builder()
           .queueUrl(queue.renderString)
-          .attributes(attributes.map {
-            case (k, v) => k.queueAttributeName -> v
-          }.asJava)
+          .attributes(
+            attributes
+              .map { pair =>
+                val (k, v) = pair.repr
+                k.queueAttributeName -> v
+              }
+              .toMap
+              .asJava)
           .build()
       client.setQueueAttributes(req).handleVoidResult(cb)
     }

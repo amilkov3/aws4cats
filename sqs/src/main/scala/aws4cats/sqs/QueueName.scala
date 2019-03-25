@@ -6,7 +6,9 @@ import cats.Show
 
 case class QueueName(
   value: String
-)
+) {
+  def copy(value: String): Either[String, QueueName] = QueueName.apply(value)
+}
 
 object QueueName {
 

@@ -6,12 +6,13 @@ import aws4cats.internal._
 import cats.effect.Async
 import fs2.{text, Stream}
 import org.http4s.headers.`Content-Type`
-import org.http4s.{EntityDecoder, Headers, Response => Http4sResp}
+import org.http4s.{EntityDecoder, Headers, MediaType, Response => Http4sResp}
 import software.amazon.awssdk.services.sqs.SqsAsyncClient
 import software.amazon.awssdk.services.sqs.model.{Message => AwsMessage, _}
 
 import scala.collection.JavaConverters._
 import cats.implicits._
+import com.rits.cloning.Cloner
 
 import scala.concurrent.duration._
 
@@ -35,7 +36,7 @@ abstract class BaseReceiveMessageBuilder(
 
   def visibilityTimeOut(timeout: FiniteDuration): BaseReceiveMessageBuilder
 
-  def waitTimeSeconds(time: FiniteDuration): BaseReceiveMessageBuilder
+  def waitTime(time: FiniteDuration): BaseReceiveMessageBuilder
 
 }
 
@@ -44,6 +45,16 @@ private[sqs] class ReceiveMessageBuilder(
   client: SqsAsyncClient
 ) extends BaseReceiveMessageBuilder(builder, client) {
   self =>
+
+  private val cloner = new Cloner()
+
+  protected def copy(
+    modify: ReceiveMessageRequest.Builder => ReceiveMessageRequest.Builder)
+    : ReceiveMessageBuilder =
+    new ReceiveMessageBuilder(
+      modify(cloner.deepClone(builder)),
+      client
+    )
 
   def attributesNames(
     names: List[QueueAttributeName]): ReceiveMessageBuilder = {
@@ -71,7 +82,7 @@ private[sqs] class ReceiveMessageBuilder(
     self
   }
 
-  def waitTimeSeconds(time: FiniteDuration): ReceiveMessageBuilder = {
+  def waitTime(time: FiniteDuration): ReceiveMessageBuilder = {
     builder.waitTimeSeconds(time.toSeconds.toInt)
     self
   }
@@ -84,9 +95,8 @@ private[sqs] class ReceiveMessageBuilder(
       λ[A => List[ReceiveMessageResponse[A]]]](builder.build()) {
       self =>
 
-      override def decode[F[_], A](
-        mediaType: _root_.org.http4s.MediaType,
-        strict: Boolean)(implicit ED: EntityDecoder[F, A])
+      override def decode[F[_], A](mediaType: MediaType, strict: Boolean)(
+        implicit ED: EntityDecoder[F, A])
         : SendWithDecodeStage[List[ReceiveMessageResponse[A]], F] =
         new SendWithDecodeStage[List[ReceiveMessageResponse[A]], F] {
           override def send(

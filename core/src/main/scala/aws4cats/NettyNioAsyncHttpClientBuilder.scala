@@ -5,6 +5,9 @@ import com.rits.cloning.Cloner
 
 import scala.concurrent.duration._
 import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient
+import software.amazon.awssdk.http.async.{
+  SdkAsyncHttpClient => AwsSdkAsyncHttpClient
+}
 
 sealed abstract class NettyNioAsyncHttpClientBuilder(
   builder: NettyNioAsyncHttpClient.Builder
@@ -47,7 +50,7 @@ sealed abstract class NettyNioAsyncHttpClientBuilder(
     copy(_.writeTimeout(Duration.ofNanos(timeout.toNanos)))
 
   def build(): SdkAsyncHttpClient =
-    Wrapped(builder.build())
+    SdkAsyncHttpClient(builder.build())
 
 }
 
@@ -58,3 +61,6 @@ object NettyNioAsyncHttpClientBuilder {
       NettyNioAsyncHttpClient.builder()
     ) {}
 }
+
+// TODO: wrapper trait so users can implement their own clients
+case class SdkAsyncHttpClient(client: AwsSdkAsyncHttpClient)

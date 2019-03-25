@@ -9,8 +9,7 @@ import java.util.concurrent.{CompletableFuture, Executor, ExecutorService}
 import java.time.temporal.ChronoUnit
 
 import scala.concurrent.duration
-import aws4cats.{ExecutorServiceWrapper, Region}
-import aws4cats.BaseSdkAsyncClientBuilder
+import aws4cats.{BaseSdkAsyncClientBuilder, ExecutorServiceWrapper, Region}
 import software.amazon.awssdk.services.s3.{
   S3AsyncClient,
   S3AsyncClientBuilder,
@@ -134,11 +133,17 @@ sealed abstract class AsyncS3Client[F[_]](client: S3AsyncClient)(
 sealed abstract class AsyncS3ClientBuilder[F[_]: Effect: ContextShift: Logger](
   builder: S3AsyncClientBuilder,
   ecR: Resource[F, ExecutionContext]
-) extends BaseSdkAsyncClientBuilder[S3AsyncClientBuilder, S3AsyncClient](
-    builder) {
+) extends BaseSdkAsyncClientBuilder[
+    S3AsyncClientBuilder,
+    S3AsyncClient,
+    F,
+    S3Client,
+    AsyncS3ClientBuilder[F]
+  ](builder) {
 
   override protected def copy(
-    modify: S3AsyncClientBuilder => S3AsyncClientBuilder) =
+    modify: S3AsyncClientBuilder => S3AsyncClientBuilder)
+    : AsyncS3ClientBuilder[F] =
     new AsyncS3ClientBuilder[F](
       builder = modify(cloner.deepClone(builder)),
       ecR = ecR

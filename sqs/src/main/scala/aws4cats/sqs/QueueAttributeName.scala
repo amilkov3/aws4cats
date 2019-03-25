@@ -4,8 +4,18 @@ import software.amazon.awssdk.services.sqs.model.{
   QueueAttributeName => AwsQueueAttributeName
 }
 
+import scala.concurrent.duration._
+
 sealed trait QueueAttributeName extends Product with Serializable {
   val queueAttributeName: AwsQueueAttributeName
+}
+
+final class Pair private[sqs] (val repr: (WriteAttribute, String))
+  extends AnyVal
+sealed trait WriteAttribute extends QueueAttributeName { self =>
+
+  def ~>[V](v: V)(implicit assoc: Assoc[self.type, V], show: ShowV[V]): Pair =
+    new Pair(self -> show.showV(v))
 }
 
 object QueueAttributeName {
@@ -13,7 +23,7 @@ object QueueAttributeName {
   import AwsQueueAttributeName._
 
   def fromEnum(name: AwsQueueAttributeName): QueueAttributeName =
-    // TODO:
+    // TODO: handle UNKNOWN_TO_SDK_VERSION
     (name: @unchecked) match {
       case ALL => All
       case APPROXIMATE_NUMBER_OF_MESSAGES =>
@@ -56,7 +66,7 @@ case object ApproximateNumberOfMessagesNotVisible extends QueueAttributeName {
   val queueAttributeName: AwsQueueAttributeName =
     AwsQueueAttributeName.APPROXIMATE_NUMBER_OF_MESSAGES_NOT_VISIBLE
 }
-case object ContentBasedDeduplication extends QueueAttributeName {
+case object ContentBasedDeduplication extends WriteAttribute {
 
   val queueAttributeName: AwsQueueAttributeName =
     AwsQueueAttributeName.CONTENT_BASED_DEDUPLICATION
@@ -66,7 +76,7 @@ case object CreatedTimestamp extends QueueAttributeName {
   val queueAttributeName: AwsQueueAttributeName =
     AwsQueueAttributeName.CREATED_TIMESTAMP
 }
-case object DelaySeconds extends QueueAttributeName {
+case object DelaySeconds extends WriteAttribute {
 
   val queueAttributeName: AwsQueueAttributeName =
     AwsQueueAttributeName.DELAY_SECONDS
@@ -76,12 +86,12 @@ case object FifoQueue extends QueueAttributeName {
   val queueAttributeName: AwsQueueAttributeName =
     AwsQueueAttributeName.FIFO_QUEUE
 }
-case object KmsDataKeyReusePeriodSeconds extends QueueAttributeName {
+case object KmsDataKeyReusePeriodSeconds extends WriteAttribute {
 
   val queueAttributeName: AwsQueueAttributeName =
     AwsQueueAttributeName.KMS_DATA_KEY_REUSE_PERIOD_SECONDS
 }
-case object KmsMasterKeyId extends QueueAttributeName {
+case object KmsMasterKeyId extends WriteAttribute {
 
   val queueAttributeName: AwsQueueAttributeName =
     AwsQueueAttributeName.KMS_MASTER_KEY_ID
@@ -91,17 +101,17 @@ case object LastModifiedTimestamp extends QueueAttributeName {
   val queueAttributeName: AwsQueueAttributeName =
     AwsQueueAttributeName.LAST_MODIFIED_TIMESTAMP
 }
-case object MaximumMessageSize extends QueueAttributeName {
+case object MaximumMessageSize extends WriteAttribute {
 
   val queueAttributeName: AwsQueueAttributeName =
     AwsQueueAttributeName.MAXIMUM_MESSAGE_SIZE
 }
-case object MessageRetentionPeriod extends QueueAttributeName {
+case object MessageRetentionPeriod extends WriteAttribute {
 
   val queueAttributeName: AwsQueueAttributeName =
     AwsQueueAttributeName.MESSAGE_RETENTION_PERIOD
 }
-case object Policy extends QueueAttributeName {
+case object Policy extends WriteAttribute {
   val queueAttributeName: AwsQueueAttributeName = AwsQueueAttributeName.POLICY
 }
 case object QueueArn extends QueueAttributeName {
@@ -109,18 +119,63 @@ case object QueueArn extends QueueAttributeName {
   val queueAttributeName: AwsQueueAttributeName =
     AwsQueueAttributeName.QUEUE_ARN
 }
-case object ReceiveMessageWaitTimeSeconds extends QueueAttributeName {
+case object ReceiveMessageWaitTimeSeconds extends WriteAttribute {
 
   val queueAttributeName: AwsQueueAttributeName =
     AwsQueueAttributeName.RECEIVE_MESSAGE_WAIT_TIME_SECONDS
 }
-case object RedrivePolicy extends QueueAttributeName {
+case object RedrivePolicy extends WriteAttribute {
 
   val queueAttributeName: AwsQueueAttributeName =
     AwsQueueAttributeName.REDRIVE_POLICY
 }
-case object VisibilityTimeout extends QueueAttributeName {
+case object VisibilityTimeout extends WriteAttribute {
 
   val queueAttributeName: AwsQueueAttributeName =
     AwsQueueAttributeName.VISIBILITY_TIMEOUT
+}
+
+sealed class Assoc[K <: WriteAttribute, V: ShowV]
+
+sealed trait ShowV[V] {
+  def showV(v: V): String
+}
+
+object ShowV {
+
+  private def instance[V](enc: V => String): ShowV[V] =
+    new ShowV[V] {
+      override def showV(v: V): String = enc(v)
+    }
+
+  implicit val duration: ShowV[FiniteDuration] = instance(_.toSeconds.toString)
+  implicit val string: ShowV[String] = instance(identity)
+  implicit val int: ShowV[Int] = instance(_.toString)
+  implicit val bool: ShowV[Boolean] = instance(_.toString)
+
+}
+
+object Assoc {
+
+  implicit val contentBasedDeduplication
+    : Assoc[ContentBasedDeduplication.type, Boolean] = new Assoc
+  implicit val delaySeconds: Assoc[DelaySeconds.type, FiniteDuration] =
+    new Assoc
+  implicit val kmsMasterKeyId: Assoc[KmsMasterKeyId.type, String] = new Assoc
+  implicit val kmsReuse
+    : Assoc[KmsDataKeyReusePeriodSeconds.type, FiniteDuration] = new Assoc
+  implicit val maximumMessageSize: Assoc[MaximumMessageSize.type, Int] =
+    new Assoc
+  implicit val messageRetentionPeriod
+    : Assoc[MessageRetentionPeriod.type, FiniteDuration] =
+    new Assoc
+  implicit val policy: Assoc[Policy.type, String] = new Assoc
+  implicit val receiveMessageWaitTimeSeconds
+    : Assoc[ReceiveMessageWaitTimeSeconds.type, FiniteDuration] =
+    new Assoc
+  implicit val redrivePolicy: Assoc[RedrivePolicy.type, String] = new Assoc
+  implicit val visibilityTimeout
+    : Assoc[VisibilityTimeout.type, FiniteDuration] =
+    new Assoc
+
 }

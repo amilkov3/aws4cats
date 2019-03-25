@@ -5,8 +5,10 @@ import cats.implicits._
 import internal._
 
 case class AccountId private (
-    id: Long
-)
+  id: Long
+) {
+  def copy(id: Long): Either[String, AccountId] = AccountId.apply(id)
+}
 
 object AccountId {
 

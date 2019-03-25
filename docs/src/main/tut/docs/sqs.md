@@ -77,23 +77,42 @@ Most methods are single stage. i.e.
 
 
 ```scala
+
+import scala.concurrent.duration._
+
 clientR.use(client =>
-  client.createQueue(queueName, Map(VisibilityTimeout -> "0"))
+  client.createQueue(queueName, VisibilityTimeout ~> 0.seconds)
 )
 ```
 
-the SQS API only has one multistage method:
+the SQS API only has one multistage method 
+(need [http4s-circe](https://mvnrepository.com/artifact/org.http4s/http4s-circe) 
+for this) :
 
 ```scala
+
+import cats.Applicative
+import io.circe.generic.semiauto._
+import org.http4s.{EntityEncoder, MediaType}
+import org.http4s.circe._
+
 case class Foo(
   x: String,
   y: Int
 )
 
+object Foo {
+
+  implicit val circeEncoder: Encoder[Foo] = deriveEncoder
+
+  implicit def http4sEncoder[F[_]: Applicative]: EntityEncoder[F, Foo] =
+      jsonEncoderOf[F, Foo]
+}
+
 clientR.use(client => 
   client
     .receiveMessage(queueUri)
-    .waitTimeSeconds(5.seconds)
+    .waitTime(5.seconds)
     .maxNumberOfMessages(2)
     .build
     .decode[IO, Foo](MediaType.application.json, true)

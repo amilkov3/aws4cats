@@ -24,7 +24,7 @@ trait SQSClient[F[_]] {
   //TODO: hmap?
   def createQueue(
     queueName: QueueName,
-    attributes: Map[QueueAttributeName, String] = Map.empty
+    attributes: Pair*
   ): F[Uri]
 
   def deleteMessage(
@@ -59,7 +59,7 @@ trait SQSClient[F[_]] {
   def setQueueAttributes(
     queueUri: Uri,
     //TODO: hmap?
-    attributes: Map[QueueAttributeName, String]
+    attributes: Pair*
   ): F[Unit]
 
 }
