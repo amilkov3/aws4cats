@@ -5,7 +5,7 @@ as closely as possible</p>
 
 <h3 id="installing">Installing</h3>
 
-<div class="highlighter-rouge"><pre class="highlight"><code>"ml.milkov" %% "aws4" % "0.1.0"
+<div class="highlighter-rouge"><pre class="highlight"><code>"ml.milkov" %% "aws4" % "0.2.0"
 </code></pre>
 </div>
 
@@ -67,23 +67,42 @@ to read in credentials</p>
 
 <p>Most methods are single stage. i.e.</p>
 
-<div class="language-scala highlighter-rouge"><pre class="highlight"><code><span class="n">clientR</span><span class="o">.</span><span class="n">use</span><span class="o">(</span><span class="n">client</span> <span class="k">=&gt;</span>
-  <span class="n">client</span><span class="o">.</span><span class="n">createQueue</span><span class="o">(</span><span class="n">queueName</span><span class="o">,</span> <span class="nc">Map</span><span class="o">(</span><span class="nc">VisibilityTimeout</span> <span class="o">-&gt;</span> <span class="s">"0"</span><span class="o">))</span>
+<div class="language-scala highlighter-rouge"><pre class="highlight"><code>
+<span class="k">import</span> <span class="nn">scala.concurrent.duration._</span>
+
+<span class="n">clientR</span><span class="o">.</span><span class="n">use</span><span class="o">(</span><span class="n">client</span> <span class="k">=&gt;</span>
+  <span class="n">client</span><span class="o">.</span><span class="n">createQueue</span><span class="o">(</span><span class="n">queueName</span><span class="o">,</span> <span class="nc">VisibilityTimeout</span> <span class="o">~&gt;</span> <span class="mf">0.</span><span class="n">seconds</span><span class="o">)</span>
 <span class="o">)</span>
 </code></pre>
 </div>
 
-<p>the SQS API only has one multistage method:</p>
+<p>the SQS API only has one multistage method 
+(need <a href="https://mvnrepository.com/artifact/org.http4s/http4s-circe">http4s-circe</a> 
+for this) :</p>
 
-<div class="language-scala highlighter-rouge"><pre class="highlight"><code><span class="k">case</span> <span class="k">class</span> <span class="nc">Foo</span><span class="o">(</span>
+<div class="language-scala highlighter-rouge"><pre class="highlight"><code>
+<span class="k">import</span> <span class="nn">cats.Applicative</span>
+<span class="k">import</span> <span class="nn">io.circe.generic.semiauto._</span>
+<span class="k">import</span> <span class="nn">org.http4s.</span><span class="o">{</span><span class="nc">EntityEncoder</span><span class="o">,</span> <span class="nc">MediaType</span><span class="o">}</span>
+<span class="k">import</span> <span class="nn">org.http4s.circe._</span>
+
+<span class="k">case</span> <span class="k">class</span> <span class="nc">Foo</span><span class="o">(</span>
   <span class="n">x</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span>
   <span class="n">y</span><span class="k">:</span> <span class="kt">Int</span>
 <span class="o">)</span>
 
-<span class="n">clientR</span><span class="o">.</span><span class="n">use</span><span class="o">(</span><span class="n">client</span> <span class="k">=&gt;</span> 
+<span class="k">object</span> <span class="nc">Foo</span> <span class="o">{</span>
+
+  <span class="k">implicit</span> <span class="k">val</span> <span class="n">circeEncoder</span><span class="k">:</span> <span class="kt">Encoder</span><span class="o">[</span><span class="kt">Foo</span><span class="o">]</span> <span class="k">=</span> <span class="n">deriveEncoder</span>
+
+  <span class="k">implicit</span> <span class="k">def</span> <span class="n">http4sEncoder</span><span class="o">[</span><span class="kt">F</span><span class="o">[</span><span class="k">_</span><span class="o">]</span><span class="kt">:</span> <span class="kt">Applicative</span><span class="o">]</span><span class="k">:</span> <span class="kt">EntityEncoder</span><span class="o">[</span><span class="kt">F</span>, <span class="kt">Foo</span><span class="o">]</span> <span class="k">=</span>
+      <span class="n">jsonEncoderOf</span><span class="o">[</span><span class="kt">F</span>, <span class="kt">Foo</span><span class="o">]</span>
+<span class="o">}</span>
+
+<span class="n">clientR</span><span class="o">.</span><span class="n">use</span><span class="o">(</span><span class="n">client</span> <span class="k">=&gt;</span>
   <span class="n">client</span>
     <span class="o">.</span><span class="n">receiveMessage</span><span class="o">(</span><span class="n">queueUri</span><span class="o">)</span>
-    <span class="o">.</span><span class="n">waitTimeSeconds</span><span class="o">(</span><span class="mf">5.</span><span class="n">seconds</span><span class="o">)</span>
+    <span class="o">.</span><span class="n">waitTime</span><span class="o">(</span><span class="mf">5.</span><span class="n">seconds</span><span class="o">)</span>
     <span class="o">.</span><span class="n">maxNumberOfMessages</span><span class="o">(</span><span class="mi">2</span><span class="o">)</span>
     <span class="o">.</span><span class="n">build</span>
     <span class="o">.</span><span class="n">decode</span><span class="o">[</span><span class="kt">IO</span>, <span class="kt">Foo</span><span class="o">](</span><span class="nc">MediaType</span><span class="o">.</span><span class="n">application</span><span class="o">.</span><span class="n">json</span><span class="o">,</span> <span class="kc">true</span><span class="o">)</span>
