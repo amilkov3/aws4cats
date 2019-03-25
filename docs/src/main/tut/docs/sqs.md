@@ -14,7 +14,7 @@ as closely as possible
 ### Installing
 
 ```
-"ml.milkov" %% "aws4" % "0.1.0"
+"ml.milkov" %% "aws4" % "0.2.0"
 ```
 
 ### External setup
@@ -109,7 +109,7 @@ object Foo {
       jsonEncoderOf[F, Foo]
 }
 
-clientR.use(client => 
+clientR.use(client =>
   client
     .receiveMessage(queueUri)
     .waitTime(5.seconds)
