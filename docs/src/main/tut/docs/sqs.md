@@ -14,7 +14,7 @@ as closely as possible
 ### Installing
 
 ```
-"ml.milkov" %% "aws4" % "0.2.0"
+"ml.milkov" %% "aws4cats-sqs" % "0.2.0"
 ```
 
 ### External setup

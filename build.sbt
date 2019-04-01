@@ -11,7 +11,6 @@ lazy val commonSettings = Seq(
   addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full),
   addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.9.9"),
   organization := "ml.milkov",
-  scalaVersion := "2.12.8",
   scalacOptions ++= Seq(
     "-Xfatal-warnings",
     "-Ypartial-unification",
@@ -106,7 +105,7 @@ lazy val docs = project.in(file("docs"))
     micrositeDescription := "Purely functional clients for AWS services",
     micrositeGithubOwner := "amilkov3",
     micrositeGithubRepo := "aws4cats",
-    micrositeHomepage := "http://aws4cats.milkov.ml",
+    micrositeHomepage := "https://aws4cats.milkov.ml",
     micrositeExtraMdFiles := Map(
       file("README.md") -> ExtraMdFileConfig(
         "index.md",

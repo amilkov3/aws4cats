@@ -1,7 +1,6 @@
 language: scala
 
 scala:
-  - 2.11.12
   - 2.12.8
 
 jdk:
@@ -24,3 +23,16 @@ after_success:
   - if [ "$TRAVIS_PULL_REQUEST" = "true" ]; then echo "Not in master branch, skipping
     deploy and release"; fi
 
+deploy:
+  - provider: script
+    script: sbt "; project core; +publishSigned; sonatypeReleaseAll; project sqs; +publishSigned; sonatypeReleaseAll;"
+    on:
+      tags: true
+
+      #stages:
+      #  - before_install
+      #  - install
+      #  - script
+      #  - after_success
+      #  - name: deploy
+      #    if: tag IS present
