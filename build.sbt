@@ -1,3 +1,4 @@
+import com.typesafe.sbt.SbtGit.GitKeys._
 import microsites.ExtraMdFileConfig
 import ReleaseTransformations._
 import xerial.sbt.Sonatype.GitHubHosting
@@ -92,10 +93,15 @@ lazy val core = project.in(file("core"))
 lazy val docs = project.in(file("docs"))
   .enablePlugins(MicrositesPlugin)
   .enablePlugins(GhpagesPlugin)
+  .enablePlugins(ScalaUnidocPlugin)
   .settings(
     git.remoteRepo := "git@github.com:amilkov3/aws4cats.git",
     ghpagesNoJekyll := true,
-    ghpagesRepository := file("git@github.com:amilkov3/aws4cats.git")
+    ghpagesRepository := file("git@github.com:amilkov3/aws4cats.git"),
+    excludeFilter in ghpagesCleanSite :=
+      new FileFilter{
+        def accept(f: File): Boolean = (ghpagesRepository.value / "CNAME").getCanonicalPath == f.getCanonicalPath
+      } || "versions.html"
   )
   .settings(commonSettings)
   .settings(noPublishSettings)
@@ -103,6 +109,7 @@ lazy val docs = project.in(file("docs"))
     micrositeName := "aws4cats",
     micrositeBaseUrl := "",
     micrositeDescription := "Purely functional clients for AWS services",
+    micrositeDocumentationUrl := "/api",
     micrositeGithubOwner := "amilkov3",
     micrositeGithubRepo := "aws4cats",
     micrositeHomepage := "https://aws4cats.milkov.ml",
@@ -113,6 +120,9 @@ lazy val docs = project.in(file("docs"))
         Map("section" -> "home", "position" -> "0")
       )
     )
+  ).settings(
+    addMappingsToSiteDir(mappings in (ScalaUnidoc, packageDoc), micrositeDocumentationUrl),
+    unidocProjectFilter in (ScalaUnidoc, unidoc) := inAnyProject -- inProjects(dynamodb, s3)
   )
   .dependsOn(core, sqs)
 
@@ -140,9 +150,9 @@ lazy val sqs = project.in(file("sqs"))
   .settings(name := "aws4cats-sqs")
   .settings(commonSettings)
   .settings(releasePublishSettings)
-  .settings(
+  /*.settings(
     scalacOptions += "-Ywarn-unused-import"
-  )
+  )*/
   .settings(
     libraryDependencies ++=
       (deps :+ ("software.amazon.awssdk" % "sqs" % awssdk))
@@ -151,6 +161,7 @@ lazy val sqs = project.in(file("sqs"))
 
 lazy val deps = Seq(
   "ch.qos.logback" % "logback-classic" % "1.2.3",
+  "eu.timepit" %% "refined" % "0.9.4",
   "io.chrisdavenport" %% "log4cats-slf4j" % "0.3.0-M2",
   /*"io.circe" %% "circe-core" % circe,
   "io.circe" %% "circe-java8" % circe,

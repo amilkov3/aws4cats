@@ -2,6 +2,10 @@ package aws4cats
 
 import org.http4s.Uri
 import cats.implicits._
+import eu.timepit.refined.string._
+import eu.timepit.refined._
+import eu.timepit.refined.api.Refined
+import internal._
 
 package object sqs {
 
@@ -13,6 +17,40 @@ package object sqs {
       queueName: QueueName
     ): Uri =
       Uri.unsafeFromString(
-        show"https://sqs.${region.toString}.amazonaws.com/$accountId/$queueName")
+        s"https://sqs.${region.toString}.amazonaws.com/${accountId.value}/${queueName.value}"
+      )
   }
+
+  private[sqs] type QueueAndLabelSpec =
+    MatchesRegex[W.`"[a-zA-Z0-9-_]{1,80}"`.T]
+
+  type QueueName = String Refined QueueAndLabelSpec
+
+  object QueueName {
+
+    def unsafe(name: String): QueueName =
+      apply(name).rethrow
+
+    def apply(name: String): Either[String, QueueName] =
+      refineV[QueueAndLabelSpec](name).leftMap(
+        _ =>
+          s"Queue name: $name must be alphanumeric (- and _ are allowed as well) and no more than 80 chars"
+      )
+
+  }
+
+  type Label = String Refined QueueAndLabelSpec
+
+  object Label {
+
+    def unsafe(label: String): Label =
+      apply(label).rethrow
+
+    def apply(label: String): Either[String, Label] =
+      refineV[QueueAndLabelSpec](label).leftMap(
+        _ =>
+          s"Label: $label must be alphanumeric (- and _ are allowed as well) and no more than 80 chars"
+      )
+  }
+
 }

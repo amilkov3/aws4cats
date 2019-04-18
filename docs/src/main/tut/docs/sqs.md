@@ -7,34 +7,9 @@ position: 1
 
 # SQS
 
-Intended to mirror the [official API docs](https://docs.aws.amazon.com/AWSSimpleQueueService/latest/APIReference/Welcome.html)
+Intended to mirror the [official API docs](https://docs.aws.amazon.com/AWSSimpleQueueService/latest/APIReference/Welcome.html){:target="_blank"}
 as closely as possible
 
-
-### Installing
-
-```
-"ml.milkov" %% "aws4cats-sqs" % "0.2.0"
-```
-
-### External setup
-
-#### Authenticating against AWS
-
-You should use the AWS CLI to obtain temporary
-credentials (will be written to `~/.aws/credentials`) for
-a profile that has permissions to talk to the SQS queues
-in the given region you'd like to interact with. Then you
-can simply set:
-
-```
-export AWS_PROFILE=<said-profile>
-export AWS_REGION=<queue-location-region>
-```
-
-The following client uses the `software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider`
-which read the `AWS_PROFILE` variable to determine for which profile
-to read in credentials
 
 ### Instantiating a client
 
@@ -65,41 +40,43 @@ val queueName = QueueName.unsafe("testqueue")
 
 val queueUri = Uri.unsafeFromParts(
   `us-east-1`,
-  AccountId.unsafe(150081971781L),
+  AccountId.unsafe("150081971781"),
   queueName
 )
 
 ```
 
-### API Methods
-
-Most methods are single stage. i.e.
-
+### Create a queue
 
 ```scala
-
-import scala.concurrent.duration._
-
 clientR.use(client =>
-  client.createQueue(queueName, VisibilityTimeout ~> 0.seconds)
+                       // unsafe bind `VisibilityTimeout` to an int literal
+  client.createQueue(queueName, VisibilityTimeout ~!> 0)
 )
 ```
-
-the SQS API only has one multistage method 
-(need [http4s-circe](https://mvnrepository.com/artifact/org.http4s/http4s-circe) 
-for this) :
+### Send a message
 
 ```scala
+case class Foo(
+  x: String,
+  y: Int
+)
 
+client.sendMessage(queueUri, Foo("hello", 5)): IO[SendMessageResponse]
+```
+
+### Receiving a message
+
+the SQS API only has one multistage method 
+(need [http4s-circe](https://mvnrepository.com/artifact/org.http4s/http4s-circe){:target="_blank"}
+for this example) :
+
+```scala
 import cats.Applicative
 import io.circe.generic.semiauto._
 import org.http4s.{EntityEncoder, MediaType}
 import org.http4s.circe._
 
-case class Foo(
-  x: String,
-  y: Int
-)
 
 object Foo {
 
@@ -110,17 +87,17 @@ object Foo {
 }
 
 clientR.use(client =>
-  client
+  (client
     .receiveMessage(queueUri)
     .waitTime(5.seconds)
     .maxNumberOfMessages(2)
     .build
     .decode[IO, Foo](MediaType.application.json, true)
-    .send
+    .send) : IO[List[ReceiveMessageResponse[Foo]]]
 )
 ```
 
 comprised of a builder stage, where various request headers and params
 can be set, a decode stage, where the content type and whether
 the payload should be decoded strictly is specified, and the send
-stage, where the request is constructed
+stage, where the request is finally constructed

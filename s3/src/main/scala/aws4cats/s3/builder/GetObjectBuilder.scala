@@ -4,10 +4,18 @@ package builder
 
 import aws4cats._
 import aws4cats.internal._
+import cats.data.NonEmptyList
 import cats.effect.{Async, ContextShift, Resource}
 import cats.implicits._
+import com.rits.cloning.Cloner
 import fs2.io
-import org.http4s.{EntityDecoder, Headers, MediaType, Response => Http4sResp}
+import org.http4s.{
+  EntityDecoder,
+  Headers,
+  HttpDate,
+  MediaType,
+  Response => Http4sResp
+}
 import org.http4s.headers._
 import software.amazon.awssdk.core.ResponseBytes
 import software.amazon.awssdk.core.async.AsyncResponseTransformer
@@ -19,14 +27,57 @@ import software.amazon.awssdk.services.s3.model.{
 
 import scala.concurrent.ExecutionContext
 
-private[s3] class GetObjectBuilder(
+abstract class BaseGetObjectBuilder(
   builder: GetObjectRequest.Builder,
   client: S3AsyncClient
 ) extends BuilderStage[
     GetObjectRequest.Builder,
     DecodeStage[GetObjectRequest, GetObjectResponse],
     S3AsyncClient
-  ](builder, client) { self =>
+  ](builder, client) {
+
+  def ifMatch(head: ETag.EntityTag, tail: ETag.EntityTag*): BaseGetObjectBuilder
+
+  def ifModifiedSince(since: HttpDate): BaseGetObjectBuilder
+
+  def ifNoneMatch(ifNoneMatch: `If-None-Match`): BaseGetObjectBuilder
+
+  def ifUnmodifiedSince(since: HttpDate): BaseGetObjectBuilder
+
+  def range(range: Range): BaseGetObjectBuilder
+}
+
+private[s3] class GetObjectBuilder(
+  builder: GetObjectRequest.Builder,
+  client: S3AsyncClient
+) extends BaseGetObjectBuilder(builder, client) { self =>
+
+  private val cloner = new Cloner()
+
+  protected def copy(
+    modify: GetObjectRequest.Builder => GetObjectRequest.Builder)
+    : GetObjectBuilder =
+    new GetObjectBuilder(
+      modify(cloner.deepClone(builder)),
+      client
+    )
+
+  override def ifMatch(
+    head: ETag.EntityTag,
+    tail: ETag.EntityTag*): BaseGetObjectBuilder =
+    copy(_.ifMatch(NonEmptyList(head, tail.toList).mkString_("", ",", "")))
+
+  override def ifModifiedSince(since: HttpDate): BaseGetObjectBuilder =
+    copy(_.ifModifiedSince(since.toInstant))
+
+  override def ifNoneMatch(ifNoneMatch: `If-None-Match`): BaseGetObjectBuilder =
+    copy(_.ifNoneMatch(ifNoneMatch.value))
+
+  override def ifUnmodifiedSince(since: HttpDate): BaseGetObjectBuilder =
+    copy(_.ifUnmodifiedSince(since.toInstant))
+
+  override def range(range: Range): BaseGetObjectBuilder =
+    copy(_.range(range.value))
 
   override def build(): DecodeStage[GetObjectRequest, GetObjectResponse] =
     new DecodeStage[GetObjectRequest, GetObjectResponse](builder.build()) {

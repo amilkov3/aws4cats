@@ -34,7 +34,7 @@ sealed abstract class AsyncSQSClient[F[_]](client: SqsAsyncClient)(
       val req = AddPermissionRequest
         .builder()
         .actions(actions.map(_.toString).asJavaCollection)
-        .awsAccountIds(accountIds.map(_.id.toString): _*)
+        .awsAccountIds(accountIds.map(_.value): _*)
         .label(label.value)
         .build()
       client.addPermission(req).handleVoidResult(cb)
@@ -129,7 +129,7 @@ sealed abstract class AsyncSQSClient[F[_]](client: SqsAsyncClient)(
     A.async[Uri] { cb =>
       val rb = GetQueueUrlRequest.builder().queueName(queueName.value)
       val req = ownerAccountId.fold(rb.build())(id =>
-        rb.queueOwnerAWSAccountId(id.id.toString).build)
+        rb.queueOwnerAWSAccountId(id.value).build)
       client
         .getQueueUrl(req)
         .handleResultE(

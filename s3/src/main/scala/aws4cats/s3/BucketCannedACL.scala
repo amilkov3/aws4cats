@@ -29,7 +29,7 @@ sealed trait Grantee extends Product with Serializable { self =>
 
   def toHeader: String = self match {
     case Email(emailStr) => s"emailAddress=$emailStr"
-    case AccountId(id)   => show"id=$id"
+    case AccountId(id)   => show"id=${id.value}"
     case Uri(uri)        => s"uri=${uri.renderString}"
   }
 }

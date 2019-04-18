@@ -5,6 +5,10 @@ import cats.implicits._
 import org.http4s.{EntityDecoder, EntityEncoder, MediaType, Uri}
 import org.http4s.circe._
 import aws4cats._
+import eu.timepit.refined._
+import eu.timepit.refined.numeric._
+import eu.timepit.refined.auto._
+
 import cats.Applicative
 import io.circe.{Decoder, Encoder}
 import io.circe.generic.semiauto._
@@ -23,7 +27,7 @@ class AsyncSQSClientIT extends BaseTest with BeforeAndAfterAll {
 
   val queueUri = Uri.unsafeFromParts(
     `us-east-1`,
-    AccountId.unsafe(150081971781L),
+    AccountId.unsafe("150081971781"),
     queueName
   )
   case class Foo(
@@ -49,13 +53,7 @@ class AsyncSQSClientIT extends BaseTest with BeforeAndAfterAll {
 
   override def beforeAll(): Unit =
     clientR
-      .use(
-        client =>
-          client.createQueue(
-            queueName,
-            VisibilityTimeout ~> 0.seconds
-        )
-      )
+      .use(_.createQueue(queueName, VisibilityTimeout ~!> 0))
       .unsafeRunSync()
 
   def numMessages[F[_]](client: SQSClient[F])(implicit S: Sync[F]): F[Int] =
@@ -75,14 +73,13 @@ class AsyncSQSClientIT extends BaseTest with BeforeAndAfterAll {
 
     clientR
       .use { client =>
-        client.setQueueAttributes(queueUri, DelaySeconds ~> 0.seconds) *>
+        client.setQueueAttributes(queueUri, DelaySeconds ~!> 0) *>
           client
             .getQueueAttributes(queueUri, List(DelaySeconds, VisibilityTimeout))
-            .map { attribs =>
-              println(attribs)
-              attribs.collectFirst { case (k, v) if (k == DelaySeconds) => v } shouldBe Some(
+            .map(
+              _.collectFirst { case (k, v) if (k == DelaySeconds) => v } shouldBe Some(
                 "0")
-            } *>
+            ) *>
           client
             .sendMessage(queueUri, foo) *>
           client

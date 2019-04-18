@@ -1,6 +1,11 @@
 package aws4cats.sqs.builder
 
-import aws4cats.sqs.{ReceiptHandle, ReceiveMessageResponse}
+import aws4cats.sqs.{
+  ReceiptHandle,
+  ReceiveMessageResponse,
+  ReceiveMessageWaitTimeSeconds,
+  VisibilityTimeout
+}
 import aws4cats.BuilderStage
 import aws4cats.internal._
 import cats.effect.Async
@@ -28,14 +33,17 @@ abstract class BaseReceiveMessageBuilder(
   def attributesNames(
     names: List[QueueAttributeName]): BaseReceiveMessageBuilder
 
+  // TODO: Opted out of refinement type here to not sully the API
   def maxNumberOfMessages(n: Int): BaseReceiveMessageBuilder
 
   def messageAttributeNames(names: List[String]): BaseReceiveMessageBuilder
 
   def receiveRequestAttemptId(id: String): BaseReceiveMessageBuilder
 
+  // TODO: Opted out of refinement type here to not sully the API
   def visibilityTimeOut(timeout: FiniteDuration): BaseReceiveMessageBuilder
 
+  // TODO: Opted out of refinement type here to not sully the API
   def waitTime(time: FiniteDuration): BaseReceiveMessageBuilder
 
 }
@@ -56,36 +64,23 @@ private[sqs] class ReceiveMessageBuilder(
       client
     )
 
-  def attributesNames(
-    names: List[QueueAttributeName]): ReceiveMessageBuilder = {
-    builder.attributeNames(names.asJava)
-    self
-  }
+  def attributesNames(names: List[QueueAttributeName]): ReceiveMessageBuilder =
+    copy(_.attributeNames(names.asJava))
 
-  def maxNumberOfMessages(n: Int): ReceiveMessageBuilder = {
-    builder.maxNumberOfMessages(n)
-    self
-  }
+  def maxNumberOfMessages(n: Int): ReceiveMessageBuilder =
+    copy(_.maxNumberOfMessages(n))
 
-  def messageAttributeNames(names: List[String]): ReceiveMessageBuilder = {
-    builder.messageAttributeNames(names.asJava)
-    self
-  }
+  def messageAttributeNames(names: List[String]): ReceiveMessageBuilder =
+    copy(_.messageAttributeNames(names.asJava))
 
-  def receiveRequestAttemptId(id: String): ReceiveMessageBuilder = {
-    builder.receiveRequestAttemptId(id)
-    self
-  }
+  def receiveRequestAttemptId(id: String): ReceiveMessageBuilder =
+    copy(_.receiveRequestAttemptId(id))
 
-  def visibilityTimeOut(timeout: FiniteDuration): ReceiveMessageBuilder = {
-    builder.visibilityTimeout(timeout.toSeconds.toInt)
-    self
-  }
+  def visibilityTimeOut(timeout: FiniteDuration): ReceiveMessageBuilder =
+    copy(_.visibilityTimeout(timeout.toSeconds.toInt))
 
-  def waitTime(time: FiniteDuration): ReceiveMessageBuilder = {
-    builder.waitTimeSeconds(time.toSeconds.toInt)
-    self
-  }
+  def waitTime(time: FiniteDuration): ReceiveMessageBuilder =
+    copy(_.waitTimeSeconds(time.toSeconds.toInt))
 
   override def build(): DecodeStage[
     ReceiveMessageRequest,

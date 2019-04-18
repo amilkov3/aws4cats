@@ -3,7 +3,7 @@ package aws4cats
 import software.amazon.awssdk.utils.Md5Utils
 
 case class MD5 private (
-  override val toString: String
+  value: String
 )
 
 object MD5 {
