@@ -1,4 +1,4 @@
-<html><head><title>aws4cats</title><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="author" content="ml.milkov" /><meta name="description" content="Purely functional clients for AWS services" /><meta name="og:image" content="/img/poster.png" /><meta name="image" property="og:image" content="/img/poster.png" /><meta name="og:title" content="aws4cats" /><meta name="title" property="og:title" content="aws4cats" /><meta name="og:site_name" content="aws4cats" /><meta name="og:url" content="https://aws4cats.milkov.ml" /><meta name="og:type" content="website" /><meta name="og:description" content="Purely functional clients for AWS services" /><link rel="icon" type="image/png" href="/img/favicon.png" /><meta name="twitter:title" content="aws4cats" /><meta name="twitter:image" content="/img/poster.png" /><meta name="twitter:description" content="Purely functional clients for AWS services" /><meta name="twitter:card" content="summary_large_image" /><link rel="icon" type="image/png" sizes="16x16" href="/img/favicon16x16.png" /><link rel="icon" type="image/png" sizes="24x24" href="/img/favicon24x24.png" /><link rel="icon" type="image/png" sizes="32x32" href="/img/favicon32x32.png" /><link rel="icon" type="image/png" sizes="48x48" href="/img/favicon48x48.png" /><link rel="icon" type="image/png" sizes="57x57" href="/img/favicon57x57.png" /><link rel="icon" type="image/png" sizes="60x60" href="/img/favicon60x60.png" /><link rel="icon" type="image/png" sizes="64x64" href="/img/favicon64x64.png" /><link rel="icon" type="image/png" sizes="70x70" href="/img/favicon70x70.png" /><link rel="icon" type="image/png" sizes="72x72" href="/img/favicon72x72.png" /><link rel="icon" type="image/png" sizes="76x76" href="/img/favicon76x76.png" /><link rel="icon" type="image/png" sizes="96x96" href="/img/favicon96x96.png" /><link rel="icon" type="image/png" sizes="114x114" href="/img/favicon114x114.png" /><link rel="icon" type="image/png" sizes="120x120" href="/img/favicon120x120.png" /><link rel="icon" type="image/png" sizes="128x128" href="/img/favicon128x128.png" /><link rel="icon" type="image/png" sizes="144x144" href="/img/favicon144x144.png" /><link rel="icon" type="image/png" sizes="150x150" href="/img/favicon150x150.png" /><link rel="icon" type="image/png" sizes="152x152" href="/img/favicon152x152.png" /><link rel="icon" type="image/png" sizes="196x196" href="/img/favicon196x196.png" /><link rel="icon" type="image/png" sizes="310x310" href="/img/favicon310x310.png" /><link rel="icon" type="image/png" sizes="310x150" href="/img/favicon310x150.png" /><link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" /><link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" /><link rel="stylesheet" href="/highlight/styles/default.css" /><link rel="stylesheet" href="/css/style.css" /><link rel="stylesheet" href="/css/palette.css" /><link rel="stylesheet" href="/css/codemirror.css" /></head><body><header id="site-header"><div class="navbar-wrapper"><div class="container"><div class="row"><div class="col-xs-6"><a href="/" class="brand"><div class="icon-wrapper"><span>aws4cats</span></div></a></div><div class="col-xs-6"><nav class="text-right"><ul class=""><li><a href="https://github.com/amilkov3/aws4cats"><i class="fa fa-github"></i><span class="hidden-xs">GitHub</span></a></li></ul></nav></div></div></div></div><div class="jumbotron"><div class="container"><h1 class="text-center">Purely functional clients for AWS services</h1><h2></h2><p class="text-center"><a href="https://github.com/amilkov3/aws4cats" class="btn btn-outline-inverse">View on GitHub</a></p></div></div><div><ul class="horizontalNav">     <li><a class=" active " href="/"></a></li>  <li><a class="" href="/docs/sqs.html">SQS</a></li> </ul></div></header><main id="site-main"><section class="use"><div class="container"><div id="content"><h2 id="aws4cats">aws4cats</h2>
+<html><head><title>aws4cats</title><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="author" content="ml.milkov" /><meta name="description" content="Purely functional clients for AWS services" /><meta name="og:image" content="/img/poster.png" /><meta name="image" property="og:image" content="/img/poster.png" /><meta name="og:title" content="aws4cats" /><meta name="title" property="og:title" content="aws4cats" /><meta name="og:site_name" content="aws4cats" /><meta name="og:url" content="https://aws4cats.milkov.ml" /><meta name="og:type" content="website" /><meta name="og:description" content="Purely functional clients for AWS services" /><link rel="icon" type="image/png" href="/img/favicon.png" /><meta name="twitter:title" content="aws4cats" /><meta name="twitter:image" content="/img/poster.png" /><meta name="twitter:description" content="Purely functional clients for AWS services" /><meta name="twitter:card" content="summary_large_image" /><link rel="icon" type="image/png" sizes="16x16" href="/img/favicon16x16.png" /><link rel="icon" type="image/png" sizes="24x24" href="/img/favicon24x24.png" /><link rel="icon" type="image/png" sizes="32x32" href="/img/favicon32x32.png" /><link rel="icon" type="image/png" sizes="48x48" href="/img/favicon48x48.png" /><link rel="icon" type="image/png" sizes="57x57" href="/img/favicon57x57.png" /><link rel="icon" type="image/png" sizes="60x60" href="/img/favicon60x60.png" /><link rel="icon" type="image/png" sizes="64x64" href="/img/favicon64x64.png" /><link rel="icon" type="image/png" sizes="70x70" href="/img/favicon70x70.png" /><link rel="icon" type="image/png" sizes="72x72" href="/img/favicon72x72.png" /><link rel="icon" type="image/png" sizes="76x76" href="/img/favicon76x76.png" /><link rel="icon" type="image/png" sizes="96x96" href="/img/favicon96x96.png" /><link rel="icon" type="image/png" sizes="114x114" href="/img/favicon114x114.png" /><link rel="icon" type="image/png" sizes="120x120" href="/img/favicon120x120.png" /><link rel="icon" type="image/png" sizes="128x128" href="/img/favicon128x128.png" /><link rel="icon" type="image/png" sizes="144x144" href="/img/favicon144x144.png" /><link rel="icon" type="image/png" sizes="150x150" href="/img/favicon150x150.png" /><link rel="icon" type="image/png" sizes="152x152" href="/img/favicon152x152.png" /><link rel="icon" type="image/png" sizes="196x196" href="/img/favicon196x196.png" /><link rel="icon" type="image/png" sizes="310x310" href="/img/favicon310x310.png" /><link rel="icon" type="image/png" sizes="310x150" href="/img/favicon310x150.png" /><link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" /><link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" /><link rel="stylesheet" href="/highlight/styles/default.css" /><link rel="stylesheet" href="/css/style.css" /><link rel="stylesheet" href="/css/palette.css" /><link rel="stylesheet" href="/css/codemirror.css" /></head><body><header id="site-header"><div class="navbar-wrapper"><div class="container"><div class="row"><div class="col-xs-6"><a href="/" class="brand"><div class="icon-wrapper"><span>aws4cats</span></div></a></div><div class="col-xs-6"><nav class="text-right"><ul class=""><li><a href="https://github.com/amilkov3/aws4cats"><i class="fa fa-github"></i><span class="hidden-xs">GitHub</span></a></li><li><a href="/api"><i class="fa fa-file-text"></i><span class="hidden-xs">Documentation</span></a></li></ul></nav></div></div></div></div><div class="jumbotron"><div class="container"><h1 class="text-center">Purely functional clients for AWS services</h1><h2></h2><p class="text-center"><a href="https://github.com/amilkov3/aws4cats" class="btn btn-outline-inverse">View on GitHub</a></p></div></div><div><ul class="horizontalNav">     <li><a class=" active " href="/"></a></li>  <li><a class="" href="/docs/sqs.html">SQS</a></li> </ul></div></header><main id="site-main"><section class="use"><div class="container"><div id="content"><h2 id="aws4cats">aws4cats</h2>
 
 <p><code class="highlighter-rouge">cats-effect</code>, <code class="highlighter-rouge">http4s-core</code>, <code class="highlighter-rouge">fs2</code> driver for various AWS tools. Wraps the
 new 2.0 Java AWS SDK</p>
@@ -7,6 +7,51 @@ new 2.0 Java AWS SDK</p>
 
 <ul>
   <li>SQS</li>
+  <li>S3 (wip)</li>
+  <li>DynamoDB (wip)</li>
 </ul>
+
+<h3 id="installation">Installation</h3>
+
+<div class="language-scala highlighter-rouge"><pre class="highlight"><code><span class="s">"ml.milkov"</span> <span class="o">%%</span> <span class="s">"aws4cats-sqs"</span> <span class="o">%</span> <span class="s">"0.3.0"</span>
+</code></pre>
+</div>
+
+<h3 id="authenticating-against-aws">Authenticating against AWS</h3>
+
+<p>The clients you instantiate in this library use the <a href="https://sdk.amazonaws.com/java/api/latest/software/amazon/awssdk/auth/credentials/DefaultCredentialsProvider.html"><code class="highlighter-rouge">software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider</code></a>
+logic chain by default to resolve AWS credentials</p>
+
+<p>See <a href="https://docs.aws.amazon.com/sdk-for-java/v1/developer-guide/setup-credentials.html" target="_blank">here</a>
+for how to setup credentials</p>
+
+<p>The way I would recommend is to add credentials for
+a profile that has permissions to perform the actions 
+you will be performing with whichever client you’re using 
+in this library. In <code class="highlighter-rouge">~/.aws/credentials</code> add:</p>
+<div class="highlighter-rouge"><pre class="highlight"><code>[Some-Profile]
+output = json
+region = &lt;default-region&gt;
+aws_access_key_id = &lt;id&gt;
+aws_secret_access_key = &lt;secret&gt;
+aws_session_token = &lt;token&gt;
+</code></pre>
+</div>
+<p>and then point to this profile via <code class="highlighter-rouge">export AWS_PROFILE=Some-Profile</code></p>
+
+<h3 id="development">Development</h3>
+
+<h4 id="running-tests">Running tests</h4>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>sbt:root&gt; test
+</code></pre>
+</div>
+
+<h4 id="building-and-previewing-the-microsite">Building and previewing the microsite</h4>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>sbt:docs&gt; makeMicrosite
+sbt:docs&gt; previewSite
+</code></pre>
+</div>
 
 </div></div></section><section class="technologies"><div class="container"><div class="row"></div></div></section></main><footer id="site-footer"><div class="container"><div class="row"><div class="col-xs-6"><p>aws4cats is designed and developed by <a href="" target="_blank">ml.milkov</a></p></div><div class="col-xs-6"><p class="text-right"><a href="https://github.com/amilkov3/aws4cats"><span class="fa fa-github"></span>View on GitHub</a></p></div></div><div class="row"><div class="col-xs-6"><p>Website built with <a href="https://47deg.github.io/sbt-microsites/" target="_blank">Sbt-microsites</a> - © 2016 <a href="https://www.47deg.com/" target="_blank">47 Degrees</a></p></div></div></div></footer></body></html>
