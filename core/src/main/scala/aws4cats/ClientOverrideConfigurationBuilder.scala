@@ -5,8 +5,6 @@ import org.http4s.Header
 import software.amazon.awssdk.core.client.config.{
   ClientOverrideConfiguration => AwsClientOverrideConfiguration
 }
-import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient
-
 import scala.collection.JavaConverters._
 
 sealed abstract class ClientOverrideConfigurationBuilder(
@@ -32,7 +30,9 @@ sealed abstract class ClientOverrideConfigurationBuilder(
                 .getOrElse(h.name.value, List.empty[String])))
           )
           .mapValues(_.asJava)
+          .asInstanceOf[Map[String, java.util.List[String]]]
           .asJava
+        //.asInstanceOf[java.util.Map[String, java.util.List[String]]]
       )
     )
 

@@ -6,17 +6,17 @@ import aws4cats.internal._
 
 package object aws4cats {
 
-  type AccountId = String Refined AccountId.Spec
+  type AccountId = String Refined AccountId.Refine
 
   object AccountId {
 
-    private[aws4cats] type Spec = MatchesRegex[W.`"[a-zA-Z0-9-_]{1,80}"`.T]
+    private[aws4cats] type Refine = MatchesRegex[W.`"[a-zA-Z0-9-_]{1,80}"`.T]
 
     def unsafe(id: String): AccountId =
       apply(id).rethrow
 
     def apply(id: String): Either[String, AccountId] =
-      refineV[Spec](id).leftMap(
+      refineV[Refine](id).leftMap(
         _ => s"Account id: $id must be 12 digits long"
       )
 

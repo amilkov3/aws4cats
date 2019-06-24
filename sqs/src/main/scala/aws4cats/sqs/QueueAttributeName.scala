@@ -28,7 +28,9 @@ sealed trait WritableQueueAttributeName extends QueueAttributeName { self =>
     implicit assoc: Assoc[self.type, V Refined P],
     show: ShowV[V Refined P],
     validate: Validate[V, P]): Pair =
-    new Pair(self -> show.showV(refineV[P](v).right.get))
+    new Pair(
+      self -> show.showV(
+        refineV[P](v).fold(err => throw new Exception(err), identity)))
 
 }
 
@@ -92,7 +94,9 @@ case object CreatedTimestamp extends QueueAttributeName {
 }
 case object DelaySeconds extends WritableQueueAttributeName {
 
-  private[sqs] type Repr = Int Refined Interval.Closed[W.`0`.T, W.`900`.T]
+  type Refine = Interval.Closed[W.`0`.T, W.`900`.T]
+
+  type Repr = Int Refined Refine
 
   val queueAttributeName: AwsQueueAttributeName =
     AwsQueueAttributeName.DELAY_SECONDS
@@ -104,7 +108,9 @@ case object FifoQueue extends QueueAttributeName {
 }
 case object KmsDataKeyReusePeriodSeconds extends WritableQueueAttributeName {
 
-  private[sqs] type Repr = Int Refined Interval.Closed[W.`60`.T, W.`86400`.T]
+  type Refine = Interval.Closed[W.`60`.T, W.`86400`.T]
+
+  type Repr = Int Refined Refine
 
   val queueAttributeName: AwsQueueAttributeName =
     AwsQueueAttributeName.KMS_DATA_KEY_REUSE_PERIOD_SECONDS
@@ -121,14 +127,18 @@ case object LastModifiedTimestamp extends QueueAttributeName {
 }
 case object MaximumMessageSize extends WritableQueueAttributeName {
 
-  private[sqs] type Repr = Int Refined Interval.Closed[W.`1024`.T, W.`262144`.T]
+  type Refine = Interval.Closed[W.`1024`.T, W.`262144`.T]
+
+  type Repr = Int Refined Refine
 
   val queueAttributeName: AwsQueueAttributeName =
     AwsQueueAttributeName.MAXIMUM_MESSAGE_SIZE
 }
 case object MessageRetentionPeriod extends WritableQueueAttributeName {
 
-  private[sqs] type Repr = Int Refined Interval.Closed[W.`60`.T, W.`1209600`.T]
+  type Refine = Interval.Closed[W.`60`.T, W.`1209600`.T]
+
+  type Repr = Int Refined Refine
 
   val queueAttributeName: AwsQueueAttributeName =
     AwsQueueAttributeName.MESSAGE_RETENTION_PERIOD
@@ -143,7 +153,9 @@ case object QueueArn extends QueueAttributeName {
 }
 case object ReceiveMessageWaitTimeSeconds extends WritableQueueAttributeName {
 
-  private[sqs] type Repr = Int Refined Interval.Closed[W.`0`.T, W.`20`.T]
+  type Refine = Interval.Closed[W.`0`.T, W.`20`.T]
+
+  type Repr = Int Refined Refine
 
   val queueAttributeName: AwsQueueAttributeName =
     AwsQueueAttributeName.RECEIVE_MESSAGE_WAIT_TIME_SECONDS
@@ -155,7 +167,9 @@ case object RedrivePolicy extends WritableQueueAttributeName {
 }
 case object VisibilityTimeout extends WritableQueueAttributeName {
 
-  private[sqs] type Repr = Int Refined Interval.Closed[W.`0`.T, W.`43200`.T]
+  type Refine = Interval.Closed[W.`0`.T, W.`43200`.T]
+
+  type Repr = Int Refined Refine
 
   val queueAttributeName: AwsQueueAttributeName =
     AwsQueueAttributeName.VISIBILITY_TIMEOUT

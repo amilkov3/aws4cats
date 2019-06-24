@@ -2,6 +2,7 @@ language: scala
 
 scala:
   - 2.12.8
+  - 2.13.0
 
 jdk:
   - oraclejdk8
@@ -25,7 +26,8 @@ after_success:
 
 deploy:
   - provider: script
-    script: sbt "; project core; +publishSigned; sonatypeReleaseAll; project sqs; +publishSigned; sonatypeReleaseAll;"
+    script: sbt compile
+    #"; project core; +publishSigned; sonatypeReleaseAll; project sqs; +publishSigned; sonatypeReleaseAll;"
     on:
       tags: true
 

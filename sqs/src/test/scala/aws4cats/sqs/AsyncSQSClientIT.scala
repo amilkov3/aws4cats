@@ -8,16 +8,24 @@ import aws4cats._
 import eu.timepit.refined._
 import eu.timepit.refined.numeric._
 import eu.timepit.refined.auto._
-
 import cats.Applicative
 import io.circe.{Decoder, Encoder}
 import io.circe.generic.semiauto._
-import org.scalatest.BeforeAndAfterAll
+import org.specs2.Specification
+import org.specs2.specification.BeforeAfterAll
 import test._
 
 import concurrent.duration._
 
-class AsyncSQSClientIT extends BaseTest with BeforeAndAfterAll {
+class AsyncSQSClientIT extends Specification with BeforeAfterAll {
+
+  def is =
+    s2"""
+         This is a specification to test the `AsyncSQSClient`
+
+         The API should:
+         work                                       $testAPI
+    """
 
   val clientR = AsyncSQSClientBuilder[IO](
     ecR
@@ -53,7 +61,12 @@ class AsyncSQSClientIT extends BaseTest with BeforeAndAfterAll {
 
   override def beforeAll(): Unit =
     clientR
-      .use(_.createQueue(queueName, VisibilityTimeout ~!> 0))
+      .use(
+        _.createQueue(
+          queueName,
+          VisibilityTimeout ~> refineMV[VisibilityTimeout.Refine](0),
+        )
+      )
       .unsafeRunSync()
 
   def numMessages[F[_]](client: SQSClient[F])(implicit S: Sync[F]): F[Int] =
@@ -69,15 +82,14 @@ class AsyncSQSClientIT extends BaseTest with BeforeAndAfterAll {
         )
       }
 
-  "API" should "work" in {
-
+  def testAPI =
     clientR
       .use { client =>
         client.setQueueAttributes(queueUri, DelaySeconds ~!> 0) *>
           client
             .getQueueAttributes(queueUri, List(DelaySeconds, VisibilityTimeout))
             .map(
-              _.collectFirst { case (k, v) if (k == DelaySeconds) => v } shouldBe Some(
+              _.collectFirst { case (k, v) if (k == DelaySeconds) => v } mustEqual Some(
                 "0")
             ) *>
           client
@@ -91,19 +103,17 @@ class AsyncSQSClientIT extends BaseTest with BeforeAndAfterAll {
             .send
             .map(res => {
               val message = res.head
-              message.body shouldBe Right(foo)
+              message.body mustEqual Right(foo)
               message.receiptHandle
             })
             .flatMap(receiptHandle =>
               client.deleteMessage(queueUri, receiptHandle)) *>
-          numMessages(client).map(_ shouldBe 0) *>
+          numMessages(client).map(_ mustEqual 0) *>
           1.to(5).toList.traverse(_ => client.sendMessage(queueUri, foo)) *>
           client.purgeQueue(queueUri) *>
-          numMessages(client).map(_ shouldBe 0)
+          numMessages(client).map(_ mustEqual 0)
       }
       .unsafeRunSync()
-
-  }
 
   override def afterAll(): Unit =
     clientR.use(client => client.deleteQueue(queueUri)).unsafeRunSync()

@@ -44,6 +44,7 @@ abstract class BaseSdkAsyncClientBuilder[
 
 object BaseSdkAsyncClientBuilder {
 
-  type Repr[B <: Repr[B, C], C] = SdkAsyncClientBuilder[B, C]
-    with AwsClientBuilder[B, C]
+  type Repr[B <: SdkAsyncClientBuilder[B, C] with AwsClientBuilder[B, C], C] =
+    SdkAsyncClientBuilder[B, C] with AwsClientBuilder[B, C]
+
 }

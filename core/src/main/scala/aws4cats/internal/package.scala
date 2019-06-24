@@ -4,7 +4,8 @@ import java.util.concurrent.CompletableFuture
 
 package object internal {
 
-  implicit class RichCompletableFuture[A](val repr: CompletableFuture[A])
+  implicit private[aws4cats] class RichCompletableFuture[A](
+    val repr: CompletableFuture[A])
     extends AnyVal {
 
     def handleVoidResult(

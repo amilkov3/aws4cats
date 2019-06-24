@@ -1,11 +1,10 @@
 package aws4cats
 
 import org.http4s.Uri
-import cats.implicits._
-import eu.timepit.refined.string._
+import cats.syntax.either._
+import eu.timepit.refined.string.MatchesRegex
 import eu.timepit.refined._
 import eu.timepit.refined.api.Refined
-import internal._
 
 package object sqs {
 
@@ -21,10 +20,12 @@ package object sqs {
       )
   }
 
-  private[sqs] type QueueAndLabelSpec =
+  private[sqs] type QueueAndLabelRefine =
     MatchesRegex[W.`"[a-zA-Z0-9-_]{1,80}"`.T]
 
-  type QueueName = String Refined QueueAndLabelSpec
+  import aws4cats.internal._
+
+  type QueueName = String Refined QueueAndLabelRefine
 
   object QueueName {
 
@@ -32,14 +33,14 @@ package object sqs {
       apply(name).rethrow
 
     def apply(name: String): Either[String, QueueName] =
-      refineV[QueueAndLabelSpec](name).leftMap(
+      refineV[QueueAndLabelRefine](name).leftMap(
         _ =>
           s"Queue name: $name must be alphanumeric (- and _ are allowed as well) and no more than 80 chars"
       )
 
   }
 
-  type Label = String Refined QueueAndLabelSpec
+  type Label = String Refined QueueAndLabelRefine
 
   object Label {
 
@@ -47,7 +48,7 @@ package object sqs {
       apply(label).rethrow
 
     def apply(label: String): Either[String, Label] =
-      refineV[QueueAndLabelSpec](label).leftMap(
+      refineV[QueueAndLabelRefine](label).leftMap(
         _ =>
           s"Label: $label must be alphanumeric (- and _ are allowed as well) and no more than 80 chars"
       )

@@ -106,7 +106,8 @@ sealed abstract class AsyncSQSClient[F[_]](client: SqsAsyncClient)(
 
   override def getQueueAttributes(
     queue: Uri,
-    attributes: List[QueueAttributeName]): F[Map[QueueAttributeName, String]] =
+    attributes: List[aws4cats.sqs.QueueAttributeName])
+    : F[Map[aws4cats.sqs.QueueAttributeName, String]] =
     A.async { cb =>
       val req = GetQueueAttributesRequest
         .builder()
@@ -118,7 +119,7 @@ sealed abstract class AsyncSQSClient[F[_]](client: SqsAsyncClient)(
         .handleResult(
           cb,
           _.attributes().asScala.toMap.map {
-            case (k, v) => QueueAttributeName.fromEnum(k) -> v
+            case (k, v) => aws4cats.sqs.QueueAttributeName.fromEnum(k) -> v
           }
         )
     }
@@ -175,7 +176,7 @@ sealed abstract class AsyncSQSClient[F[_]](client: SqsAsyncClient)(
   override def sendMessage[M](
     queue: Uri,
     message: M
-  )(implicit EE: EntityEncoder[F, M]): F[SendMessageResponse] =
+  )(implicit EE: EntityEncoder[F, M]): F[aws4cats.sqs.SendMessageResponse] =
     EE.toEntity(message)
       .body
       .through(text.utf8Decode)
@@ -194,7 +195,7 @@ sealed abstract class AsyncSQSClient[F[_]](client: SqsAsyncClient)(
               .handleResult(
                 cb,
                 res =>
-                  SendMessageResponse(
+                  aws4cats.sqs.SendMessageResponse(
                     res.md5OfMessageAttributes(),
                     res.md5OfMessageBody(),
                     res.messageId(),

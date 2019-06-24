@@ -1,29 +1,44 @@
-import com.typesafe.sbt.SbtGit.GitKeys._
 import microsites.ExtraMdFileConfig
 import ReleaseTransformations._
 import xerial.sbt.Sonatype.GitHubHosting
 
-val http4s = "0.20.0-M6"
+val http4s = "0.21.0-M1"
 val confide = "0.0.2"
-val circe = "0.11.1"
+val circe = "0.12.0-M3"
 val awssdk = "2.5.11"
+val cats = "2.0.0-M4"
 
 lazy val commonSettings = Seq(
-  addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full),
-  addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.9.9"),
+  isTravisBuild := true,
+  scalacOptions ++= {
+    if (is13OrAfter(scalaVersion.value)) "-Ymacro-annotations" :: Nil
+    else "-Ypartial-unification" :: Nil
+  },
+  libraryDependencies ++= {
+    if (is13OrAfter(scalaVersion.value)) Nil
+    else compilerPlugin("org.scalamacros" % "paradise" % "2.1.1" cross CrossVersion.full) :: Nil
+  },
+  addCompilerPlugin("org.typelevel" %% "kind-projector" % "0.10.3"),
   organization := "ml.milkov",
   scalacOptions ++= Seq(
-    "-Xfatal-warnings",
-    "-Ypartial-unification",
+    //"-Xfatal-warnings",
     "-feature",
     "-deprecation",
     "-language:higherKinds",
     "-language:implicitConversions",
   ),
+  scalacOptions in Test ++= Seq("-Yrangepos"),
   fork in Test := true,
   updateOptions := updateOptions.value.withGigahorse(false),
   javaOptions in Test ++= Seq("-Xmx2G", "-XX:MaxMetaspaceSize=1024M")
 )
+
+
+def is13OrAfter(scalaVersion: String): Boolean =
+  CrossVersion.partialVersion(scalaVersion) match {
+      case Some((2, n)) if n >= 13 => true
+      case _ => false
+    }
 
 lazy val root = (project in file("."))
   .settings(noPublishSettings)
@@ -121,7 +136,8 @@ lazy val docs = project.in(file("docs"))
       )
     )
   ).settings(
-    addMappingsToSiteDir(mappings in (ScalaUnidoc, packageDoc), micrositeDocumentationUrl),
+  crossScalaVersions := crossScalaVersions.value.filterNot(_.startsWith("2.13")),
+  addMappingsToSiteDir(mappings in (ScalaUnidoc, packageDoc), micrositeDocumentationUrl),
     unidocProjectFilter in (ScalaUnidoc, unidoc) := inAnyProject -- inProjects(dynamodb, s3)
   )
   .dependsOn(core, sqs)
@@ -161,19 +177,19 @@ lazy val sqs = project.in(file("sqs"))
 
 lazy val deps = Seq(
   "ch.qos.logback" % "logback-classic" % "1.2.3",
-  "eu.timepit" %% "refined" % "0.9.4",
-  "io.chrisdavenport" %% "log4cats-slf4j" % "0.3.0-M2",
+  "eu.timepit" %% "refined" % "0.9.8",
+  "io.chrisdavenport" %% "log4cats-slf4j" % "0.4.0-M1",
   /*"io.circe" %% "circe-core" % circe,
   "io.circe" %% "circe-java8" % circe,
   "io.circe" %% "circe-parser" % circe,*/
   "org.http4s" %% "http4s-core" % http4s,
-  "org.typelevel" %% "cats-core" % "1.1.0",
-  "org.typelevel" %% "cats-effect" % "1.0.0-RC2",
+  "org.typelevel" %% "cats-core" % cats,
+  "org.typelevel" %% "cats-effect" % cats,
   "uk.com.robust-it" % "cloning" % "1.9.12",
 
   "io.circe" %% "circe-generic" % circe % Test,
   "org.http4s" %% "http4s-circe" % http4s % Test,
   "org.scalacheck" %% "scalacheck" % "1.14.0" % Test,
-  "org.scalatest" %% "scalatest" % "3.0.5" % Test
+  "org.specs2" %% "specs2-core" % "4.5.1" % Test
 )
 

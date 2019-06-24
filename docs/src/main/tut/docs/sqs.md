@@ -49,18 +49,47 @@ val queueUri = Uri.unsafeFromParts(
 ### Create a queue
 
 ```scala
+
+import eu.timepit.refined._
+
 clientR.use(client =>
-                       // unsafe bind `VisibilityTimeout` to an int literal
-  client.createQueue(queueName, VisibilityTimeout ~!> 0)
+  client.createQueue(
+    queueName, 
+    // compile time macro that asserts that the literal `0` obeys
+    // the conditions of the refinement `VisibilityTimeout.Refine`
+    VisibilityTimeout ~> refineMV[VisibilityTimeout.Refine](0),
+    // unsafe bind `VisibilityTimeout` to an int
+    // this calls `refineV` under the hood which returns a
+    // `Either[String, Refined[V, P]]` and then throws an exception
+    // if its a `Left`
+    DelaySeconds ~!> 0
+  )
 )
 ```
 ### Send a message
 
 ```scala
+
+...
+import cats.Applicative
+import io.circe.Encoder
+import io.circe.generic.semiauto._
+import org.http4s.circe._
+import org.http4s.{EntityEncoder, MediaType}
+
 case class Foo(
   x: String,
   y: Int
 )
+
+object Foo {
+
+  implicit val circeEncoder: Encoder[Foo] = deriveEncoder
+
+  implicit def http4sEncoder[F[_]: Applicative]: EntityEncoder[F, Foo] =
+      jsonEncoderOf[F, Foo]
+
+}
 
 client.sendMessage(queueUri, Foo("hello", 5)): IO[SendMessageResponse]
 ```
@@ -72,18 +101,19 @@ the SQS API only has one multistage method
 for this example) :
 
 ```scala
-import cats.Applicative
-import io.circe.generic.semiauto._
-import org.http4s.{EntityEncoder, MediaType}
-import org.http4s.circe._
 
+...
+import cats.effect.Sync
+import io.circe.Decoder
+import org.http4s.EntityDecoder
 
 object Foo {
 
-  implicit val circeEncoder: Encoder[Foo] = deriveEncoder
-
-  implicit def http4sEncoder[F[_]: Applicative]: EntityEncoder[F, Foo] =
-      jsonEncoderOf[F, Foo]
+  implicit val circeDecoder: Decoder[Foo] = deriveDecoder
+  
+  implicit def http4sDecoder[F[_]: Sync]: EntityDecoder[F, Foo] =
+      jsonOf[F, Foo]
+  
 }
 
 clientR.use(client =>

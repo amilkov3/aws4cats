@@ -5,7 +5,7 @@ package builder
 import aws4cats._
 import aws4cats.internal._
 import cats.data.NonEmptyList
-import cats.effect.{Async, ContextShift, Resource}
+import cats.effect.{Async, Blocker, ContextShift, Resource}
 import cats.implicits._
 import com.rits.cloning.Cloner
 import fs2.io
@@ -108,12 +108,11 @@ private[s3] class GetObjectBuilder(
                 o <- ED
                   .decode(
                     Http4sResp[F](
-                      headers = Headers(`Content-Type`(mediaType)),
+                      headers = Headers.of(`Content-Type`(mediaType)),
                       body = io.readInputStream(
                         res.asInputStream().pure[F],
                         chunkSizeBytes,
-                        blockingEc,
-                        false
+                        Blocker.liftExecutionContext(blockingEc)
                       )
                     ),
                     false

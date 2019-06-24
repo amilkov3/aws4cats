@@ -105,8 +105,8 @@ private[sqs] class ReceiveMessageBuilder(
                 _.traverse { resp =>
                   ED.decode(
                       Http4sResp[F](
-                        headers = Headers(`Content-Type`(mediaType)),
-                        body = Stream(resp.body()).through(text.utf8Encode)
+                        headers = Headers.of(`Content-Type`(mediaType)),
+                        body = Stream(resp.body).through(text.utf8Encode)
                       ),
                       strict
                     )
