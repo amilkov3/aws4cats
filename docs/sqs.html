@@ -40,18 +40,47 @@ as closely as possible</p>
 
 <h3 id="create-a-queue">Create a queue</h3>
 
-<div class="language-scala highlighter-rouge"><pre class="highlight"><code><span class="n">clientR</span><span class="o">.</span><span class="n">use</span><span class="o">(</span><span class="n">client</span> <span class="k">=&gt;</span>
-                       <span class="c1">// unsafe bind `VisibilityTimeout` to an int literal
-</span>  <span class="n">client</span><span class="o">.</span><span class="n">createQueue</span><span class="o">(</span><span class="n">queueName</span><span class="o">,</span> <span class="nc">VisibilityTimeout</span> <span class="o">~!&gt;</span> <span class="mi">0</span><span class="o">)</span>
+<div class="language-scala highlighter-rouge"><pre class="highlight"><code>
+<span class="k">import</span> <span class="nn">eu.timepit.refined._</span>
+
+<span class="n">clientR</span><span class="o">.</span><span class="n">use</span><span class="o">(</span><span class="n">client</span> <span class="k">=&gt;</span>
+  <span class="n">client</span><span class="o">.</span><span class="n">createQueue</span><span class="o">(</span>
+    <span class="n">queueName</span><span class="o">,</span> 
+    <span class="c1">// compile time macro that asserts that the literal `0` obeys
+</span>    <span class="c1">// the conditions of the refinement `VisibilityTimeout.Refine`
+</span>    <span class="nc">VisibilityTimeout</span> <span class="o">~&gt;</span> <span class="n">refineMV</span><span class="o">[</span><span class="kt">VisibilityTimeout.Refine</span><span class="o">](</span><span class="mi">0</span><span class="o">),</span>
+    <span class="c1">// unsafe bind `VisibilityTimeout` to an int
+</span>    <span class="c1">// this calls `refineV` under the hood which returns a
+</span>    <span class="c1">// `Either[String, Refined[V, P]]` and then throws an exception
+</span>    <span class="c1">// if its a `Left`
+</span>    <span class="nc">DelaySeconds</span> <span class="o">~!&gt;</span> <span class="mi">0</span>
+  <span class="o">)</span>
 <span class="o">)</span>
 </code></pre>
 </div>
 <h3 id="send-a-message">Send a message</h3>
 
-<div class="language-scala highlighter-rouge"><pre class="highlight"><code><span class="k">case</span> <span class="k">class</span> <span class="nc">Foo</span><span class="o">(</span>
+<div class="language-scala highlighter-rouge"><pre class="highlight"><code>
+<span class="o">...</span>
+<span class="k">import</span> <span class="nn">cats.Applicative</span>
+<span class="k">import</span> <span class="nn">io.circe.Encoder</span>
+<span class="k">import</span> <span class="nn">io.circe.generic.semiauto._</span>
+<span class="k">import</span> <span class="nn">org.http4s.circe._</span>
+<span class="k">import</span> <span class="nn">org.http4s.</span><span class="o">{</span><span class="nc">EntityEncoder</span><span class="o">,</span> <span class="nc">MediaType</span><span class="o">}</span>
+
+<span class="k">case</span> <span class="k">class</span> <span class="nc">Foo</span><span class="o">(</span>
   <span class="n">x</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span>
   <span class="n">y</span><span class="k">:</span> <span class="kt">Int</span>
 <span class="o">)</span>
+
+<span class="k">object</span> <span class="nc">Foo</span> <span class="o">{</span>
+
+  <span class="k">implicit</span> <span class="k">val</span> <span class="n">circeEncoder</span><span class="k">:</span> <span class="kt">Encoder</span><span class="o">[</span><span class="kt">Foo</span><span class="o">]</span> <span class="k">=</span> <span class="n">deriveEncoder</span>
+
+  <span class="k">implicit</span> <span class="k">def</span> <span class="n">http4sEncoder</span><span class="o">[</span><span class="kt">F</span><span class="o">[</span><span class="k">_</span><span class="o">]</span><span class="kt">:</span> <span class="kt">Applicative</span><span class="o">]</span><span class="k">:</span> <span class="kt">EntityEncoder</span><span class="o">[</span><span class="kt">F</span>, <span class="kt">Foo</span><span class="o">]</span> <span class="k">=</span>
+      <span class="n">jsonEncoderOf</span><span class="o">[</span><span class="kt">F</span>, <span class="kt">Foo</span><span class="o">]</span>
+
+<span class="o">}</span>
 
 <span class="n">client</span><span class="o">.</span><span class="n">sendMessage</span><span class="o">(</span><span class="n">queueUri</span><span class="o">,</span> <span class="nc">Foo</span><span class="o">(</span><span class="s">"hello"</span><span class="o">,</span> <span class="mi">5</span><span class="o">))</span><span class="k">:</span> <span class="kt">IO</span><span class="o">[</span><span class="kt">SendMessageResponse</span><span class="o">]</span>
 </code></pre>
@@ -63,18 +92,19 @@ as closely as possible</p>
 (need <a href="https://mvnrepository.com/artifact/org.http4s/http4s-circe" target="_blank">http4s-circe</a>
 for this example) :</p>
 
-<div class="language-scala highlighter-rouge"><pre class="highlight"><code><span class="k">import</span> <span class="nn">cats.Applicative</span>
-<span class="k">import</span> <span class="nn">io.circe.generic.semiauto._</span>
-<span class="k">import</span> <span class="nn">org.http4s.</span><span class="o">{</span><span class="nc">EntityEncoder</span><span class="o">,</span> <span class="nc">MediaType</span><span class="o">}</span>
-<span class="k">import</span> <span class="nn">org.http4s.circe._</span>
-
+<div class="language-scala highlighter-rouge"><pre class="highlight"><code>
+<span class="o">...</span>
+<span class="k">import</span> <span class="nn">cats.effect.Sync</span>
+<span class="k">import</span> <span class="nn">io.circe.Decoder</span>
+<span class="k">import</span> <span class="nn">org.http4s.EntityDecoder</span>
 
 <span class="k">object</span> <span class="nc">Foo</span> <span class="o">{</span>
 
-  <span class="k">implicit</span> <span class="k">val</span> <span class="n">circeEncoder</span><span class="k">:</span> <span class="kt">Encoder</span><span class="o">[</span><span class="kt">Foo</span><span class="o">]</span> <span class="k">=</span> <span class="n">deriveEncoder</span>
-
-  <span class="k">implicit</span> <span class="k">def</span> <span class="n">http4sEncoder</span><span class="o">[</span><span class="kt">F</span><span class="o">[</span><span class="k">_</span><span class="o">]</span><span class="kt">:</span> <span class="kt">Applicative</span><span class="o">]</span><span class="k">:</span> <span class="kt">EntityEncoder</span><span class="o">[</span><span class="kt">F</span>, <span class="kt">Foo</span><span class="o">]</span> <span class="k">=</span>
-      <span class="n">jsonEncoderOf</span><span class="o">[</span><span class="kt">F</span>, <span class="kt">Foo</span><span class="o">]</span>
+  <span class="k">implicit</span> <span class="k">val</span> <span class="n">circeDecoder</span><span class="k">:</span> <span class="kt">Decoder</span><span class="o">[</span><span class="kt">Foo</span><span class="o">]</span> <span class="k">=</span> <span class="n">deriveDecoder</span>
+  
+  <span class="k">implicit</span> <span class="k">def</span> <span class="n">http4sDecoder</span><span class="o">[</span><span class="kt">F</span><span class="o">[</span><span class="k">_</span><span class="o">]</span><span class="kt">:</span> <span class="kt">Sync</span><span class="o">]</span><span class="k">:</span> <span class="kt">EntityDecoder</span><span class="o">[</span><span class="kt">F</span>, <span class="kt">Foo</span><span class="o">]</span> <span class="k">=</span>
+      <span class="n">jsonOf</span><span class="o">[</span><span class="kt">F</span>, <span class="kt">Foo</span><span class="o">]</span>
+  
 <span class="o">}</span>
 
 <span class="n">clientR</span><span class="o">.</span><span class="n">use</span><span class="o">(</span><span class="n">client</span> <span class="k">=&gt;</span>
