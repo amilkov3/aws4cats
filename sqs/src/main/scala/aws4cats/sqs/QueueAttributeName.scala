@@ -188,7 +188,7 @@ object ShowV {
       override def showV(v: V): String = enc(v)
     }
 
-  implicit private[sqs] def refined[T: ShowV, P]: ShowV[T Refined P] =
+  implicit def refined[T: ShowV, P]: ShowV[T Refined P] =
     instance(_.value.toString)
   implicit val string: ShowV[String] = instance(identity)
   implicit val int: ShowV[Int] = instance(_.toString)
